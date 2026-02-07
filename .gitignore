@@ -1,0 +1,8 @@
+node_modules/
+dist/
+logs/
+.DS_Store
+.farm-code.json
+*.log
+bun.lockb
+*.tgz

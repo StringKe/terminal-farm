@@ -1,0 +1,15 @@
+{
+  "app": {
+    "clientVersion": "1.6.0.14_20251224",
+    "minClientVersion": "1.6.0.0",
+    "forceUpdate": false
+  },
+  "game": {
+    "serverUrl": "wss://gate-obt.nqf.qq.com/prod/ws",
+    "protocolVersion": "1.0"
+  },
+  "terminal-farm": {
+    "version": "0.1.0",
+    "channel": "dev"
+  }
+}
