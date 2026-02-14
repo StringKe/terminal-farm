@@ -47,10 +47,10 @@ export const DEFAULT_TIMING: OperationTiming = {
   checkIntervalSec: 1,
 }
 
-/** exp/h 差距在此比例内视为等价，优先短周期 */
+/** exp/h 差距在此比例内视为等价，优先长周期（省金币、少操作） */
 const EXP_EQUIV_RATIO = 0.01
 
-/** 比较两个植物的 exp/h，等价时优先短周期 */
+/** 比较两个植物的 exp/h，等价时优先长周期 */
 function compareYield(
   a: PlantYieldAtLevel,
   b: PlantYieldAtLevel,
@@ -60,7 +60,7 @@ function compareYield(
   const vb = b[key]
   const max = Math.max(Math.abs(va), Math.abs(vb))
   if (max > 0 && Math.abs(vb - va) / max < EXP_EQUIV_RATIO) {
-    return a.baseGrowTimeSec - b.baseGrowTimeSec
+    return b.baseGrowTimeSec - a.baseGrowTimeSec
   }
   return vb - va
 }

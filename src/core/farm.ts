@@ -280,21 +280,24 @@ export class FarmManager {
       const sorted = [...available].sort((a, b) => a.requiredLevel - b.requiredLevel || a.price - b.price)
       return sorted[0] ?? null
     }
+    // 按金币过滤：至少买得起 1 颗种子
+    const affordable = available.filter((x: any) => x.price <= state.gold)
+    if (!affordable.length) return available.sort((a: any, b: any) => a.price - b.price)[0] ?? null
     try {
       const ranked = calculateForLandLevel(landLevel, landCount, state.level, 50, this.getOperationTiming())
       for (const rec of ranked) {
-        const hit = available.find((x: any) => x.seedId === rec.seedId)
+        const hit = affordable.find((x: any) => x.seedId === rec.seedId)
         if (hit) return hit
       }
       if (ranked.length > 0) {
         const top3 = ranked.slice(0, 3).map((r) => `${r.name}(${r.seedId})`)
-        const shopIds = available.map((a: any) => a.seedId)
+        const shopIds = affordable.map((a: any) => a.seedId)
         logWarn('商店', `推荐种子均不在商店中 推荐=[${top3.join(',')}] 商店=[${shopIds.join(',')}]`)
       }
     } catch (e: any) {
       logWarn('商店', `经验效率推荐失败，使用兜底策略: ${e.message}`)
     }
-    const sorted = [...available]
+    const sorted = [...affordable]
     if (state.level && state.level <= 28) sorted.sort((a, b) => a.requiredLevel - b.requiredLevel)
     else sorted.sort((a, b) => b.requiredLevel - a.requiredLevel)
     return sorted[0] ?? null
@@ -339,10 +342,14 @@ export class FarmManager {
     }
     if (!available) return
 
+    // 构建该等级总地块数（用于 exp/h 模型）
+    const totalByLevel = this.buildLandDistribution(allLands)
+
     // 按等级分组种植
     for (const [lvl, landIds] of groupByLevel) {
       const levelName = LAND_LEVEL_NAMES[lvl] || `等级${lvl}`
-      const bestSeed = this.findBestSeedForLevel(available, lvl, landIds.length)
+      const totalCount = totalByLevel.get(lvl) || landIds.length
+      const bestSeed = this.findBestSeedForLevel(available, lvl, totalCount)
       if (!bestSeed) {
         logWarn('商店', `${levelName}地块无可用种子`)
         continue
