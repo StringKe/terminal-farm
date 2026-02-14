@@ -101,6 +101,19 @@ export async function loadProto(): Promise<void> {
   types.ClaimAllRewardsV2Reply = root.lookupType('gamepb.illustratedpb.ClaimAllRewardsV2Reply')
   types.IllustratedRewardRedDotNotifyV2 = root.lookupType('gamepb.illustratedpb.IllustratedRewardRedDotNotifyV2')
 
+  // Weather
+  types.GetTodayWeatherRequest = root.lookupType('gamepb.weatherpb.GetTodayWeatherRequest')
+  types.GetTodayWeatherReply = root.lookupType('gamepb.weatherpb.GetTodayWeatherReply')
+  types.GetCurrentWeatherRequest = root.lookupType('gamepb.weatherpb.GetCurrentWeatherRequest')
+  types.GetCurrentWeatherReply = root.lookupType('gamepb.weatherpb.GetCurrentWeatherReply')
+
+  // QQ Vip
+  types.GetDailyGiftStatusRequest = root.lookupType('gamepb.userpb.GetDailyGiftStatusRequest')
+  types.GetDailyGiftStatusReply = root.lookupType('gamepb.userpb.GetDailyGiftStatusReply')
+  types.ClaimDailyGiftRequest = root.lookupType('gamepb.userpb.ClaimDailyGiftRequest')
+  types.ClaimDailyGiftReply = root.lookupType('gamepb.userpb.ClaimDailyGiftReply')
+  types.DailyGiftStatusChangedNTF = root.lookupType('gamepb.userpb.DailyGiftStatusChangedNTF')
+
   // Notify
   types.LandsNotify = root.lookupType('gamepb.plantpb.LandsNotify')
   types.BasicNotify = root.lookupType('gamepb.userpb.BasicNotify')

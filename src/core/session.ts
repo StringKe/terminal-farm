@@ -7,8 +7,10 @@ import { FarmManager } from './farm.js'
 import { FriendManager } from './friend.js'
 import { IllustratedManager } from './illustrated.js'
 import { processInviteCodes } from './invite.js'
+import { QQVipManager } from './qqvip.js'
 import { TaskManager } from './task.js'
 import { WarehouseManager } from './warehouse.js'
+import { WeatherManager } from './weather.js'
 
 export interface SessionOptions {
   onReconnectFailed?: (id: string) => void
@@ -23,6 +25,8 @@ export class Session {
   readonly warehouse: WarehouseManager
   readonly illustrated: IllustratedManager
   readonly email: EmailManager
+  readonly weather: WeatherManager
+  readonly qqvip: QQVipManager
 
   private logUnsub: (() => void) | null = null
   private code = ''
@@ -44,6 +48,8 @@ export class Session {
     this.warehouse = new WarehouseManager(this.conn, this.store)
     this.illustrated = new IllustratedManager(this.conn)
     this.email = new EmailManager(this.conn)
+    this.weather = new WeatherManager(this.conn, this.store)
+    this.qqvip = new QQVipManager(this.conn)
 
     // Forward connection events to store
     this.conn.on('login', (state) => this.store.updateUser(state))
@@ -101,6 +107,8 @@ export class Session {
     this.warehouse.start()
     this.illustrated.start()
     this.email.start()
+    this.weather.start()
+    this.qqvip.start()
   }
 
   private stopManagers(): void {
@@ -110,6 +118,8 @@ export class Session {
     this.warehouse.stop()
     this.illustrated.stop()
     this.email.stop()
+    this.weather.stop()
+    this.qqvip.stop()
   }
 
   private async attemptReconnect(): Promise<void> {

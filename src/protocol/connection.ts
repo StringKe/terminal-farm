@@ -298,6 +298,17 @@ export class Connection extends EventEmitter {
         return
       }
 
+      if (type.includes('DailyGiftStatusChanged')) {
+        try {
+          const notify = types.DailyGiftStatusChangedNTF.decode(eventBody) as any
+          if (notify.can_claim && !notify.claimed_today) {
+            log('推送', 'QQ会员礼包可领取')
+            this.emit('dailyGiftStatusChanged', notify)
+          }
+        } catch {}
+        return
+      }
+
       if (type.includes('IllustratedRewardRedDotNotifyV2')) {
         try {
           const notify = types.IllustratedRewardRedDotNotifyV2.decode(eventBody) as any

@@ -19,6 +19,12 @@ export interface TaskInfo {
   isClaimed: boolean
 }
 
+export interface WeatherInfo {
+  currentWeatherId: number
+  currentWeatherName: string
+  slots: any[]
+}
+
 export interface SessionState {
   user: UserState
   lands: any[]
@@ -32,6 +38,7 @@ export interface SessionState {
   friendList: FriendInfo[]
   taskList: TaskInfo[]
   operationLimits: Map<number, OperationLimit>
+  weather: WeatherInfo | null
 }
 
 export class SessionStore extends EventEmitter {
@@ -48,6 +55,7 @@ export class SessionStore extends EventEmitter {
     friendList: [],
     taskList: [],
     operationLimits: new Map(),
+    weather: null,
   }
 
   updateUser(user: Partial<UserState>): void {
@@ -127,6 +135,11 @@ export class SessionStore extends EventEmitter {
   resetFriendStats(): void {
     this.state.friendStats = { steal: 0, weed: 0, bug: 0, water: 0 }
     this.emit('change', 'friendStats')
+  }
+
+  updateWeather(weather: WeatherInfo): void {
+    this.state.weather = weather
+    this.emit('change', 'weather')
   }
 
   updateOperationLimit(limit: OperationLimit): void {

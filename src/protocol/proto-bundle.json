@@ -384,6 +384,53 @@
                   "id": 1
                 }
               }
+            },
+            "GetDailyGiftStatusRequest": {
+              "fields": {}
+            },
+            "GetDailyGiftStatusReply": {
+              "fields": {
+                "is_qq_vip": {
+                  "type": "bool",
+                  "id": 1
+                },
+                "can_claim": {
+                  "type": "bool",
+                  "id": 2
+                },
+                "claimed_today": {
+                  "type": "bool",
+                  "id": 3
+                }
+              }
+            },
+            "ClaimDailyGiftRequest": {
+              "fields": {}
+            },
+            "ClaimDailyGiftReply": {
+              "fields": {
+                "rewards": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                }
+              }
+            },
+            "DailyGiftStatusChangedNTF": {
+              "fields": {
+                "is_qq_vip": {
+                  "type": "bool",
+                  "id": 1
+                },
+                "can_claim": {
+                  "type": "bool",
+                  "id": 2
+                },
+                "claimed_today": {
+                  "type": "bool",
+                  "id": 3
+                }
+              }
             }
           }
         },
