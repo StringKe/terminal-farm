@@ -6,6 +6,7 @@ import { toLong, toNum } from '../utils/long.js'
 import { syncServerTime } from '../utils/time.js'
 import { types } from './proto-loader.js'
 import type { UserState } from './types.js'
+import { dumpNotify, dumpRaw, dumpResponse } from './ws-dumper.js'
 
 type SendCallback = (err: Error | null, body?: Uint8Array, meta?: any) => void
 
@@ -148,6 +149,7 @@ export class Connection extends EventEmitter {
       }
 
       if (msgType === 2) {
+        dumpResponse(meta, msg.body)
         const errorCode = toNum(meta.error_code)
         const clientSeqVal = toNum(meta.client_seq)
         const cb = this.pendingCallbacks.get(clientSeqVal)
@@ -167,6 +169,7 @@ export class Connection extends EventEmitter {
         }
       }
     } catch (err: any) {
+      dumpRaw(buf)
       logWarn('解码', err.message)
     }
   }
@@ -177,6 +180,7 @@ export class Connection extends EventEmitter {
       const event = types.EventMessage.decode(msg.body) as any
       const type = event.message_type || ''
       const eventBody = event.body
+      dumpNotify(type, eventBody)
 
       if (type.includes('Kickout')) {
         log('推送', `被踢下线! ${type}`)

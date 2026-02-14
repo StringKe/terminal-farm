@@ -9,6 +9,7 @@ bun.lockb
 # 敏感/运行时数据
 .farm-code.json
 .farm-stats.json
+dumps/
 
 # 生成的数据文件
 tools/*.json

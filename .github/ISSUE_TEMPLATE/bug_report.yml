@@ -7,6 +7,8 @@ body:
       value: |
         感谢反馈！请尽量详细描述问题，以便快速定位。
 
+        **调试提示**：运行时会自动将所有 WS 消息保存到 `dumps/` 目录，提交相关文件可大幅加快排查速度。
+
   - type: textarea
     id: description
     attributes:
@@ -38,7 +40,9 @@ body:
     id: logs
     attributes:
       label: 日志 / 错误信息
-      description: 粘贴终端输出或 `logs/` 目录下的相关日志
+      description: |
+        粘贴终端输出或 `logs/` 目录下的相关日志。
+        如果是数据相关问题，请附上 `dumps/` 目录中对应的 JSON 文件内容。
       render: shell
 
   - type: dropdown
