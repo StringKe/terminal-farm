@@ -28,10 +28,10 @@ function getLandBuff(level: number): LandBuff {
   return source.get(level) ?? { timeReduction: 0, expBonus: 0, yieldBonus: 0 }
 }
 
-/** 每块地种植耗时（秒），bot 实际约 50ms/块 */
-const PLANT_TIME_PER_LAND = 0.05
-/** 收获操作耗时（秒） */
-const HARVEST_TIME = 0.1
+/** 每块地种植耗时（秒）：网络请求 ~150ms + sleep 50ms ≈ 0.2s */
+const PLANT_TIME_PER_LAND = 0.2
+/** 单次循环固定开销（秒）：收获 + 购买 + 巡检延迟 */
+const CYCLE_OVERHEAD = 0.5
 /** exp/h 差距在此比例内视为等价，优先短周期 */
 const EXP_EQUIV_RATIO = 0.01
 
@@ -111,13 +111,13 @@ function calcPlantYield(plant: PlantConfig, landLevel: number, landCount: number
   const expPerHarvest = plant.exp * (1 + expBonus)
   const expPerCycle = expPerHarvest * seasons
 
-  // 不施肥
+  // 不施肥：生长 + 种植操作 + 固定开销
   const growNoFert = baseGrow * (1 - timeReduction)
-  const cycleNoFert = growNoFert + landCount * PLANT_TIME_PER_LAND + HARVEST_TIME
+  const cycleNoFert = growNoFert + landCount * PLANT_TIME_PER_LAND + CYCLE_OVERHEAD
 
-  // 施肥（跳过第一阶段）
+  // 施肥（跳过第一阶段）：生长 + 种植+施肥操作 + 固定开销
   const growWithFert = (baseGrow - firstPhase) * (1 - timeReduction)
-  const cycleWithFert = growWithFert + landCount * PLANT_TIME_PER_LAND * 2 + HARVEST_TIME
+  const cycleWithFert = growWithFert + landCount * PLANT_TIME_PER_LAND * 2 + CYCLE_OVERHEAD
 
   const expPerHourNoFert = cycleNoFert > 0 ? ((expPerCycle * landCount) / cycleNoFert) * 3600 : 0
   const expPerHourWithFert = cycleWithFert > 0 ? ((expPerCycle * landCount) / cycleWithFert) * 3600 : 0
