@@ -1,7 +1,7 @@
 import { config } from '../config/index.js'
 import { Connection } from '../protocol/connection.js'
 import { SessionStore } from '../store/session-store.js'
-import { log, onLog } from '../utils/logger.js'
+import { log, logWarn, onLog } from '../utils/logger.js'
 import { FarmManager } from './farm.js'
 import { FriendManager } from './friend.js'
 import { processInviteCodes } from './invite.js'
