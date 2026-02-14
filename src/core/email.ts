@@ -1,7 +1,7 @@
 import { getItemName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
-import { log, logWarn } from '../utils/logger.js'
+import type { ScopedLogger } from '../utils/logger.js'
 import { toNum } from '../utils/long.js'
 
 const EMAIL_TYPE_SYSTEM = 1
@@ -9,7 +9,10 @@ const EMAIL_TYPE_SYSTEM = 1
 export class EmailManager {
   private initTimer: ReturnType<typeof setTimeout> | null = null
 
-  constructor(private conn: Connection) {}
+  constructor(
+    private conn: Connection,
+    private logger: ScopedLogger,
+  ) {}
 
   async checkAndClaimEmails(): Promise<void> {
     try {
@@ -23,11 +26,11 @@ export class EmailManager {
       const claimable = emails.filter((e: any) => e.has_reward)
       if (!claimable.length) return
 
-      log('邮件', `发现 ${claimable.length} 封可领取奖励的邮件`)
+      this.logger.log('邮件', `发现 ${claimable.length} 封可领取奖励的邮件`)
       const emailIds = claimable.map((e: any) => e.email_id)
       await this.batchClaim(emailIds)
     } catch (e: any) {
-      logWarn('邮件', `检查邮件失败: ${e.message}`)
+      this.logger.logWarn('邮件', `检查邮件失败: ${e.message}`)
     }
   }
 
@@ -52,17 +55,17 @@ export class EmailManager {
             return `${getItemName(id)}(${id})x${count}`
           })
           .join('/')
-        log('邮件', `领取 ${emailIds.length} 封邮件奖励: ${summary}`)
+        this.logger.log('邮件', `领取 ${emailIds.length} 封邮件奖励: ${summary}`)
       } else {
-        log('邮件', `已领取 ${emailIds.length} 封邮件`)
+        this.logger.log('邮件', `已领取 ${emailIds.length} 封邮件`)
       }
     } catch (e: any) {
-      logWarn('邮件', `批量领取邮件奖励失败: ${e.message}`)
+      this.logger.logWarn('邮件', `批量领取邮件奖励失败: ${e.message}`)
     }
   }
 
   private onNewEmail = (): void => {
-    log('邮件', '收到新邮件推送，检查可领取奖励...')
+    this.logger.log('邮件', '收到新邮件推送，检查可领取奖励...')
     setTimeout(() => this.checkAndClaimEmails(), 1000)
   }
 

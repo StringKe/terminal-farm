@@ -14,7 +14,8 @@ import type { AccountConfig } from '../config/schema.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
-import { log, logWarn, setCurrentAccountLabel, sleep } from '../utils/logger.js'
+import type { ScopedLogger } from '../utils/logger.js'
+import { sleep } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 import { getServerTimeSec, toTimeSec } from '../utils/time.js'
 import {
@@ -40,6 +41,7 @@ export class FarmManager {
     private conn: Connection,
     private store: SessionStore,
     private getAccountConfig: () => AccountConfig,
+    private logger: ScopedLogger,
   ) {}
 
   setOperationLimitsCallback(cb: OperationLimitsCallback): void {
@@ -154,12 +156,12 @@ export class FarmManager {
             types.UseRequest.create({ item: { id: toLong(refillId), count: toLong(1) } }),
           ).finish()
           await this.conn.sendMsgAsync('gamepb.itempb.ItemService', 'Use', body)
-          log('补充', `化肥补充: ${getItemName(refillId)} x1`)
+          this.logger.log('补充', `化肥补充: ${getItemName(refillId)} x1`)
           return
         }
       }
     } catch (e: any) {
-      logWarn('补充', `化肥补充失败: ${e.message}`)
+      this.logger.logWarn('补充', `化肥补充失败: ${e.message}`)
     }
   }
 
@@ -211,7 +213,7 @@ export class FarmManager {
         types.PlantReply.decode(replyBody)
         successCount++
       } catch (e: any) {
-        logWarn('种植', `土地#${landId} 失败: ${e.message}`)
+        this.logger.logWarn('种植', `土地#${landId} 失败: ${e.message}`)
       }
       if (landIds.length > 1) await sleep(50)
     }
@@ -231,7 +233,7 @@ export class FarmManager {
   private async getAvailableSeeds(): Promise<any[] | null> {
     const shopReply = await this.getShopInfo(SEED_SHOP_ID)
     if (!shopReply.goods_list?.length) {
-      logWarn('商店', '种子商店无商品')
+      this.logger.logWarn('商店', '种子商店无商品')
       return null
     }
     const state = this.conn.userState
@@ -262,7 +264,7 @@ export class FarmManager {
       })
     }
     if (!available.length) {
-      logWarn('商店', '没有可购买的种子')
+      this.logger.logWarn('商店', '没有可购买的种子')
       return null
     }
     return available
@@ -274,7 +276,7 @@ export class FarmManager {
     if (acfg.manualSeedId > 0) {
       const manual = available.find((x: any) => x.seedId === acfg.manualSeedId)
       if (manual) return manual
-      logWarn('商店', `手动种子ID ${acfg.manualSeedId} 不可用，回退自动选择`)
+      this.logger.logWarn('商店', `手动种子ID ${acfg.manualSeedId} 不可用，回退自动选择`)
     }
     if (acfg.forceLowestLevelCrop) {
       const sorted = [...available].sort((a, b) => a.requiredLevel - b.requiredLevel || a.price - b.price)
@@ -292,10 +294,10 @@ export class FarmManager {
       if (ranked.length > 0) {
         const top3 = ranked.slice(0, 3).map((r) => `${r.name}(${r.seedId})`)
         const shopIds = affordable.map((a: any) => a.seedId)
-        logWarn('商店', `推荐种子均不在商店中 推荐=[${top3.join(',')}] 商店=[${shopIds.join(',')}]`)
+        this.logger.logWarn('商店', `推荐种子均不在商店中 推荐=[${top3.join(',')}] 商店=[${shopIds.join(',')}]`)
       }
     } catch (e: any) {
-      logWarn('商店', `经验效率推荐失败，使用兜底策略: ${e.message}`)
+      this.logger.logWarn('商店', `经验效率推荐失败，使用兜底策略: ${e.message}`)
     }
     const sorted = [...affordable]
     if (state.level && state.level <= 28) sorted.sort((a, b) => a.requiredLevel - b.requiredLevel)
@@ -309,10 +311,10 @@ export class FarmManager {
     if (deadLandIds.length > 0) {
       try {
         await this.removePlant(deadLandIds)
-        log('铲除', `已铲除 ${deadLandIds.length} 块 (${deadLandIds.join(',')})`)
+        this.logger.log('铲除', `已铲除 ${deadLandIds.length} 块 (${deadLandIds.join(',')})`)
         landsToPlant.push(...deadLandIds)
       } catch (e: any) {
-        logWarn('铲除', `批量铲除失败: ${e.message}`)
+        this.logger.logWarn('铲除', `批量铲除失败: ${e.message}`)
       }
     }
     if (!landsToPlant.length) return
@@ -337,7 +339,7 @@ export class FarmManager {
     try {
       available = await this.getAvailableSeeds()
     } catch (e: any) {
-      logWarn('商店', `查询失败: ${e.message}`)
+      this.logger.logWarn('商店', `查询失败: ${e.message}`)
       return
     }
     if (!available) return
@@ -348,13 +350,13 @@ export class FarmManager {
       const levelName = LAND_LEVEL_NAMES[lvl] || `等级${lvl}`
       const bestSeed = this.findBestSeedForLevel(available, lvl, totalLandCount)
       if (!bestSeed) {
-        logWarn('商店', `${levelName}地块无可用种子`)
+        this.logger.logWarn('商店', `${levelName}地块无可用种子`)
         continue
       }
       const seedName = getPlantNameBySeedId(bestSeed.seedId)
       const growTime = getPlantGrowTime(1020000 + (bestSeed.seedId - 20000))
       const growTimeStr = growTime > 0 ? ` ${formatGrowTime(growTime)}` : ''
-      log(
+      this.logger.log(
         '商店',
         `${levelName}x${landIds.length} 最优: ${seedName}(${bestSeed.seedId}) ${bestSeed.price}币${growTimeStr}`,
       )
@@ -364,11 +366,11 @@ export class FarmManager {
       if (totalCost > state.gold) {
         const canBuy = Math.floor(state.gold / bestSeed.price)
         if (canBuy <= 0) {
-          logWarn('商店', `金币不足，跳过${levelName}地块 (需${totalCost}, 有${state.gold})`)
+          this.logger.logWarn('商店', `金币不足，跳过${levelName}地块 (需${totalCost}, 有${state.gold})`)
           continue
         }
         toBuy = landIds.slice(0, canBuy)
-        log('商店', `金币有限，${levelName}只种 ${canBuy}/${landIds.length} 块`)
+        this.logger.log('商店', `金币有限，${levelName}只种 ${canBuy}/${landIds.length} 块`)
       }
 
       let actualSeedId = bestSeed.seedId
@@ -378,32 +380,32 @@ export class FarmManager {
           const gotItem = buyReply.get_items[0]
           const gotId = toNum(gotItem.id)
           const gotCount = toNum(gotItem.count)
-          log('购买', `获得: ${getItemName(gotId)}(${gotId}) x${gotCount}`)
+          this.logger.log('购买', `获得: ${getItemName(gotId)}(${gotId}) x${gotCount}`)
           if (gotId > 0) actualSeedId = gotId
         }
         if (buyReply.cost_items) for (const item of buyReply.cost_items) state.gold -= toNum(item.count)
       } catch (e: any) {
-        logWarn('购买', e.message)
+        this.logger.logWarn('购买', e.message)
         continue
       }
 
       let plantedLands: number[] = []
       try {
         const planted = await this.plantSeeds(actualSeedId, toBuy)
-        log('种植', `${levelName} 已种${planted}块 (${toBuy.join(',')})`)
+        this.logger.log('种植', `${levelName} 已种${planted}块 (${toBuy.join(',')})`)
         if (planted > 0) plantedLands = toBuy.slice(0, planted)
       } catch (e: any) {
-        logWarn('种植', e.message)
+        this.logger.logWarn('种植', e.message)
       }
       if (plantedLands.length > 0) {
         const fertCfg = this.getAccountConfig()
         if (fertCfg.useNormalFertilizer) {
           const fertilized = await this.fertilize(plantedLands)
-          if (fertilized > 0) log('施肥', `${levelName} 普通 ${fertilized}/${plantedLands.length}块`)
+          if (fertilized > 0) this.logger.log('施肥', `${levelName} 普通 ${fertilized}/${plantedLands.length}块`)
         }
         if (fertCfg.useOrganicFertilizer) {
           const orgFert = await this.fertilize(plantedLands, ORGANIC_FERTILIZER_ID)
-          if (orgFert > 0) log('施肥', `${levelName} 有机 ${orgFert}/${plantedLands.length}块`)
+          if (orgFert > 0) this.logger.log('施肥', `${levelName} 有机 ${orgFert}/${plantedLands.length}块`)
         }
       }
     }
@@ -475,11 +477,10 @@ export class FarmManager {
   async checkFarm(): Promise<void> {
     if (this.isChecking || !this.conn.userState.gid) return
     this.isChecking = true
-    setCurrentAccountLabel(this.conn.userState.name || `GID:${this.conn.userState.gid}`)
     try {
       const landsReply = await this.getAllLands()
       if (!landsReply.lands?.length) {
-        log('农场', '没有土地数据')
+        this.logger.log('农场', '没有土地数据')
         return
       }
       const lands = landsReply.lands
@@ -511,7 +512,7 @@ export class FarmManager {
             .then(() => {
               actions.push(`除草${status.needWeed.length}`)
             })
-            .catch((e) => logWarn('除草', e.message)),
+            .catch((e) => this.logger.logWarn('除草', e.message)),
         )
       if (status.needBug.length > 0)
         batchOps.push(
@@ -519,7 +520,7 @@ export class FarmManager {
             .then(() => {
               actions.push(`除虫${status.needBug.length}`)
             })
-            .catch((e) => logWarn('除虫', e.message)),
+            .catch((e) => this.logger.logWarn('除虫', e.message)),
         )
       if (status.needWater.length > 0)
         batchOps.push(
@@ -527,7 +528,7 @@ export class FarmManager {
             .then(() => {
               actions.push(`浇水${status.needWater.length}`)
             })
-            .catch((e) => logWarn('浇水', e.message)),
+            .catch((e) => this.logger.logWarn('浇水', e.message)),
         )
       if (batchOps.length > 0) await Promise.all(batchOps)
       let harvestedLandIds: number[] = []
@@ -537,7 +538,7 @@ export class FarmManager {
           actions.push(`收获${status.harvestable.length}`)
           harvestedLandIds = [...status.harvestable]
         } catch (e: any) {
-          logWarn('收获', e.message)
+          this.logger.logWarn('收获', e.message)
         }
       }
       const allDeadLands = [...status.dead, ...harvestedLandIds]
@@ -546,11 +547,11 @@ export class FarmManager {
           await this.autoPlantEmptyLands(allDeadLands, status.empty, lands)
           actions.push(`种植${allDeadLands.length + status.empty.length}`)
         } catch (e: any) {
-          logWarn('种植', e.message)
+          this.logger.logWarn('种植', e.message)
         }
       }
       const actionStr = actions.length > 0 ? ` → ${actions.join('/')}` : ''
-      if (hasWork) log('农场', `[${statusParts.join(' ')}]${actionStr}`)
+      if (hasWork) this.logger.log('农场', `[${statusParts.join(' ')}]${actionStr}`)
       if (this.isFirstReplantLog) {
         this.isFirstReplantLog = false
         this.logBestSeedOnStartup(unlockedLandCount, landDist)
@@ -562,7 +563,7 @@ export class FarmManager {
       if (this.getAccountConfig().autoReplantMode === 'always' && status.growing.length > 0)
         await this.autoReplantIfNeeded(lands, 'check')
     } catch (err: any) {
-      logWarn('巡田', `检查失败: ${err.message}`)
+      this.logger.logWarn('巡田', `检查失败: ${err.message}`)
     } finally {
       this.isChecking = false
     }
@@ -589,7 +590,7 @@ export class FarmManager {
         }
       }
     } catch (e: any) {
-      logWarn('换种', `获取推荐失败: ${e.message}`)
+      this.logger.logWarn('换种', `获取推荐失败: ${e.message}`)
       return
     }
     if (bestSeedByLevel.size === 0) return
@@ -642,7 +643,7 @@ export class FarmManager {
           const levelName = LAND_LEVEL_NAMES[lvl] || `等级${lvl}`
           parts.push(`${levelName}→${name}`)
         }
-        log('换种', `无需换种 (最优${alreadyBestCount}, 保护${protectedCount}): ${parts.join(', ')}`)
+        this.logger.log('换种', `无需换种 (最优${alreadyBestCount}, 保护${protectedCount}): ${parts.join(', ')}`)
       }
       return
     }
@@ -651,11 +652,11 @@ export class FarmManager {
       const levelName = LAND_LEVEL_NAMES[lvl] || `等级${lvl}`
       parts.push(`${levelName}→${name}`)
     }
-    log('换种', `铲除${toReplant.length}块, 保护${protectedCount}块: ${parts.join(', ')}`)
+    this.logger.log('换种', `铲除${toReplant.length}块, 保护${protectedCount}块: ${parts.join(', ')}`)
     try {
       await this.autoPlantEmptyLands(toReplant, [], lands)
     } catch (e: any) {
-      logWarn('换种', `操作失败: ${e.message}`)
+      this.logger.logWarn('换种', `操作失败: ${e.message}`)
     }
   }
 
@@ -676,7 +677,10 @@ export class FarmManager {
           if (best) parts.push(`${name}x${lvl.landCount}→${best.name} ${best.expPerHourWithFert.toFixed(1)}exp/h`)
         }
         if (parts.length > 0) {
-          log('推荐', `Lv${state.level} 总计${rec.totalExpPerHourWithFert.toFixed(1)}exp/h: ${parts.join(', ')}`)
+          this.logger.log(
+            '推荐',
+            `Lv${state.level} 总计${rec.totalExpPerHourWithFert.toFixed(1)}exp/h: ${parts.join(', ')}`,
+          )
         }
       } else {
         const rec = getPlantingRecommendation(state.level, unlockedLandCount, {
@@ -685,10 +689,13 @@ export class FarmManager {
         })
         const best = rec.candidatesNormalFert?.[0]
         if (best)
-          log('推荐', `Lv${state.level} 最佳种子: ${best.name}(${best.seedId}) ${best.expPerHour.toFixed(2)}exp/h`)
+          this.logger.log(
+            '推荐',
+            `Lv${state.level} 最佳种子: ${best.name}(${best.seedId}) ${best.expPerHour.toFixed(2)}exp/h`,
+          )
       }
     } catch (e: any) {
-      logWarn('推荐', `启动推荐计算失败: ${e.message}`)
+      this.logger.logWarn('推荐', `启动推荐计算失败: ${e.message}`)
     }
   }
 
@@ -706,10 +713,10 @@ export class FarmManager {
       try {
         const reply = (await this.unlockLand(landId)) as any
         const newLevel = reply.land ? toNum(reply.land.level) : '?'
-        log('解锁', `土地#${landId} 解锁成功 (等级${newLevel})`)
+        this.logger.log('解锁', `土地#${landId} 解锁成功 (等级${newLevel})`)
         await sleep(200)
       } catch (e: any) {
-        logWarn('解锁', `土地#${landId} 解锁失败: ${e.message}`)
+        this.logger.logWarn('解锁', `土地#${landId} 解锁失败: ${e.message}`)
       }
     }
   }
@@ -728,10 +735,10 @@ export class FarmManager {
       try {
         const reply = (await this.upgradeLand(landId)) as any
         const newLevel = reply.land ? toNum(reply.land.level) : '?'
-        log('升级', `土地#${landId} 升级成功 → 等级${newLevel}`)
+        this.logger.log('升级', `土地#${landId} 升级成功 → 等级${newLevel}`)
         await sleep(200)
       } catch (e: any) {
-        logWarn('升级', `土地#${landId} 升级失败: ${e.message}`)
+        this.logger.logWarn('升级', `土地#${landId} 升级失败: ${e.message}`)
       }
     }
   }
@@ -741,14 +748,14 @@ export class FarmManager {
     const now = Date.now()
     if (now - this.lastPushTime < 500) return
     this.lastPushTime = now
-    log('农场', '收到推送: 土地变化，检查中...')
+    this.logger.log('农场', '收到推送: 土地变化，检查中...')
     setTimeout(() => {
       if (!this.isChecking) this.checkFarm()
     }, 100)
   }
 
   private onLevelUpReplant = async ({ oldLevel, newLevel }: { oldLevel: number; newLevel: number }): Promise<void> => {
-    log('换种', `Lv${oldLevel}→Lv${newLevel} 检查是否需要换种...`)
+    this.logger.log('换种', `Lv${oldLevel}→Lv${newLevel} 检查是否需要换种...`)
     try {
       const landsReply = await this.getAllLands()
       if (!landsReply.lands?.length) return
@@ -766,18 +773,18 @@ export class FarmManager {
             const levelName = LAND_LEVEL_NAMES[newLvl.landLevel] || `等级${newLvl.landLevel}`
             const oldName = oldLvl?.bestWithFert?.name ?? '无'
             const newName = newLvl.bestWithFert?.name ?? '无'
-            log('换种', `Lv${oldLevel}→Lv${newLevel} ${levelName}最优变化: ${oldName}→${newName}`)
+            this.logger.log('换种', `Lv${oldLevel}→Lv${newLevel} ${levelName}最优变化: ${oldName}→${newName}`)
             changed = true
           }
         }
       } catch {}
       if (!changed) {
-        log('换种', `Lv${oldLevel}→Lv${newLevel} 各等级最优种子未变`)
+        this.logger.log('换种', `Lv${oldLevel}→Lv${newLevel} 各等级最优种子未变`)
         return
       }
       await this.autoReplantIfNeeded(lands, 'levelup')
     } catch (e: any) {
-      logWarn('换种', `升级换种失败: ${e.message}`)
+      this.logger.logWarn('换种', `升级换种失败: ${e.message}`)
     }
   }
 

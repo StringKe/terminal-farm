@@ -1,13 +1,16 @@
 import { getItemName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
-import { log, logWarn } from '../utils/logger.js'
+import type { ScopedLogger } from '../utils/logger.js'
 import { toNum } from '../utils/long.js'
 
 export class IllustratedManager {
   private initTimer: ReturnType<typeof setTimeout> | null = null
 
-  constructor(private conn: Connection) {}
+  constructor(
+    private conn: Connection,
+    private logger: ScopedLogger,
+  ) {}
 
   async checkAndClaimRewards(): Promise<void> {
     try {
@@ -25,10 +28,10 @@ export class IllustratedManager {
       const claimable = levelList.filter((l: any) => l.can_claim && !l.claimed)
       if (!claimable.length) return
 
-      log('图鉴', `发现 ${claimable.length} 个可领取的图鉴等级奖励`)
+      this.logger.log('图鉴', `发现 ${claimable.length} 个可领取的图鉴等级奖励`)
       await this.claimAll()
     } catch (e: any) {
-      logWarn('图鉴', `检查图鉴奖励失败: ${e.message}`)
+      this.logger.logWarn('图鉴', `检查图鉴奖励失败: ${e.message}`)
     }
   }
 
@@ -52,15 +55,15 @@ export class IllustratedManager {
             return `${getItemName(id)}(${id})x${count}`
           })
           .join('/')
-        log('图鉴', `领取奖励: ${summary}`)
+        this.logger.log('图鉴', `领取奖励: ${summary}`)
       }
     } catch (e: any) {
-      logWarn('图鉴', `领取图鉴奖励失败: ${e.message}`)
+      this.logger.logWarn('图鉴', `领取图鉴奖励失败: ${e.message}`)
     }
   }
 
   private onRewardRedDot = (): void => {
-    log('图鉴', '收到红点推送，检查可领取奖励...')
+    this.logger.log('图鉴', '收到红点推送，检查可领取奖励...')
     setTimeout(() => this.checkAndClaimRewards(), 500)
   }
 

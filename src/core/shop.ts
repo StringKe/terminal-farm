@@ -2,7 +2,7 @@ import { getItemName } from '../config/game-data.js'
 import type { AccountConfig } from '../config/schema.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
-import { log, logWarn, setCurrentAccountLabel } from '../utils/logger.js'
+import type { ScopedLogger } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 
 export class ShopManager {
@@ -11,6 +11,7 @@ export class ShopManager {
   constructor(
     private conn: Connection,
     private getAccountConfig: () => AccountConfig,
+    private logger: ScopedLogger,
   ) {}
 
   start(): void {
@@ -29,7 +30,6 @@ export class ShopManager {
   private async checkFreeGifts(): Promise<void> {
     if (!this.getAccountConfig().autoClaimFreeGifts) return
     if (!this.conn.userState.gid) return
-    setCurrentAccountLabel(this.conn.userState.name || `GID:${this.conn.userState.gid}`)
 
     try {
       const profilesBody = types.ShopProfilesRequest.encode(types.ShopProfilesRequest.create({})).finish()
@@ -83,18 +83,18 @@ export class ShopManager {
               const getItems = buyReply.get_items || []
               if (getItems.length > 0) {
                 const got = getItems[0]
-                log('礼包', `免费礼包: ${getItemName(toNum(got.id))} x${toNum(got.count)}`)
+                this.logger.log('礼包', `免费礼包: ${getItemName(toNum(got.id))} x${toNum(got.count)}`)
               } else {
-                log('礼包', `免费礼包: ${getItemName(itemId)} 已领取`)
+                this.logger.log('礼包', `免费礼包: ${getItemName(itemId)} 已领取`)
               }
             } catch (e: any) {
-              logWarn('礼包', `领取失败 (${getItemName(itemId)}): ${e.message}`)
+              this.logger.logWarn('礼包', `领取失败 (${getItemName(itemId)}): ${e.message}`)
             }
           }
         } catch {}
       }
     } catch (e: any) {
-      logWarn('礼包', `检查免费礼包失败: ${e.message}`)
+      this.logger.logWarn('礼包', `检查免费礼包失败: ${e.message}`)
     }
   }
 }

@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import WebSocket from 'ws'
 import type { AppConfig } from '../config/schema.js'
-import { log, logWarn } from '../utils/logger.js'
+import type { ScopedLogger } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 import { syncServerTime } from '../utils/time.js'
 import { types } from './proto-loader.js'
@@ -27,7 +27,10 @@ export class Connection extends EventEmitter {
 
   readonly userState: UserState = { gid: 0, name: '', level: 0, gold: 0, exp: 0 }
 
-  constructor(private config: AppConfig) {
+  constructor(
+    private config: AppConfig,
+    private logger: ScopedLogger,
+  ) {
     super()
   }
 
@@ -64,7 +67,7 @@ export class Connection extends EventEmitter {
       })
 
       this.ws.on('close', (code, _reason) => {
-        log('WS', `连接关闭 (code=${code})`)
+        this.logger.log('WS', `连接关闭 (code=${code})`)
         this.cleanup()
         if (!settled) {
           settled = true
@@ -74,7 +77,7 @@ export class Connection extends EventEmitter {
       })
 
       this.ws.on('error', (err) => {
-        logWarn('WS', `错误: ${err.message}`)
+        this.logger.logWarn('WS', `错误: ${err.message}`)
         if (!settled) {
           settled = true
           reject(err)
@@ -86,7 +89,7 @@ export class Connection extends EventEmitter {
 
   sendMsg(serviceName: string, methodName: string, bodyBytes: Uint8Array, callback?: SendCallback): boolean {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      log('WS', '连接未打开')
+      this.logger.log('WS', '连接未打开')
       return false
     }
     const seq = this.clientSeq
@@ -174,12 +177,15 @@ export class Connection extends EventEmitter {
           return
         }
         if (errorCode !== 0) {
-          logWarn('错误', `${meta.service_name}.${meta.method_name} code=${errorCode} ${meta.error_message || ''}`)
+          this.logger.logWarn(
+            '错误',
+            `${meta.service_name}.${meta.method_name} code=${errorCode} ${meta.error_message || ''}`,
+          )
         }
       }
     } catch (err: any) {
       dumpRaw(buf)
-      logWarn('解码', err.message)
+      this.logger.logWarn('解码', err.message)
     }
   }
 
@@ -192,12 +198,12 @@ export class Connection extends EventEmitter {
       dumpNotify(type, eventBody)
 
       if (type.includes('Kickout')) {
-        log('推送', `被踢下线! ${type}`)
+        this.logger.log('推送', `被踢下线! ${type}`)
         try {
           const notify = types.KickoutNotify.decode(eventBody)
-          log('推送', `原因: ${(notify as any).reason_message || '未知'}`)
+          this.logger.log('推送', `原因: ${(notify as any).reason_message || '未知'}`)
         } catch (e: any) {
-          logWarn('推送', `Kickout 解码失败: ${e.message}`)
+          this.logger.logWarn('推送', `Kickout 解码失败: ${e.message}`)
         }
         this.emit('kickout')
         return
@@ -212,7 +218,7 @@ export class Connection extends EventEmitter {
             this.emit('landsChanged', lands)
           }
         } catch (e: any) {
-          logWarn('推送', `LandsNotify 解码失败: ${e.message}`)
+          this.logger.logWarn('推送', `LandsNotify 解码失败: ${e.message}`)
         }
         return
       }
@@ -248,7 +254,7 @@ export class Connection extends EventEmitter {
             const exp = toNum(notify.basic.exp)
             if (exp > 0) this.userState.exp = exp
             if (this.userState.level !== oldLevel) {
-              log('系统', `升级! Lv${oldLevel} → Lv${this.userState.level}`)
+              this.logger.log('系统', `升级! Lv${oldLevel} → Lv${this.userState.level}`)
               this.emit('levelUp', { oldLevel, newLevel: this.userState.level })
             }
             this.emit('stateChanged', this.userState)
@@ -272,7 +278,7 @@ export class Connection extends EventEmitter {
           const friends = notify.friends || []
           if (friends.length > 0) {
             const names = friends.map((f: any) => f.name || f.remark || `GID:${toNum(f.gid)}`).join(', ')
-            log('好友', `新好友: ${names}`)
+            this.logger.log('好友', `新好友: ${names}`)
           }
         } catch {}
         return
@@ -282,7 +288,7 @@ export class Connection extends EventEmitter {
         try {
           const notify = types.GoodsUnlockNotify.decode(eventBody) as any
           const goods = notify.goods_list || []
-          if (goods.length > 0) log('商店', `解锁 ${goods.length} 个新商品!`)
+          if (goods.length > 0) this.logger.log('商店', `解锁 ${goods.length} 个新商品!`)
         } catch {}
         return
       }
@@ -300,7 +306,7 @@ export class Connection extends EventEmitter {
           const notify = types.NewEmailNotify.decode(eventBody) as any
           const emails = notify.new_emails || []
           if (emails.length > 0) {
-            log('推送', `收到 ${emails.length} 封新邮件`)
+            this.logger.log('推送', `收到 ${emails.length} 封新邮件`)
             this.emit('newEmailNotify', emails)
           }
         } catch {}
@@ -311,7 +317,7 @@ export class Connection extends EventEmitter {
         try {
           const notify = types.DailyGiftStatusChangedNTF.decode(eventBody) as any
           if (notify.can_claim && !notify.claimed_today) {
-            log('推送', 'QQ会员礼包可领取')
+            this.logger.log('推送', 'QQ会员礼包可领取')
             this.emit('dailyGiftStatusChanged', notify)
           }
         } catch {}
@@ -328,7 +334,7 @@ export class Connection extends EventEmitter {
         return
       }
     } catch (e: any) {
-      logWarn('推送', `解码失败: ${e.message}`)
+      this.logger.logWarn('推送', `解码失败: ${e.message}`)
     }
   }
 
@@ -356,7 +362,7 @@ export class Connection extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.sendMsg('gamepb.userpb.UserService', 'Login', body, (err, bodyBytes) => {
         if (err) {
-          log('登录', `失败: ${err.message}`)
+          this.logger.log('登录', `失败: ${err.message}`)
           reject(err)
           return
         }
@@ -370,7 +376,7 @@ export class Connection extends EventEmitter {
             this.userState.exp = toNum(reply.basic.exp)
             if (reply.time_now_millis) syncServerTime(toNum(reply.time_now_millis))
 
-            log(
+            this.logger.log(
               '登录',
               `成功 GID=${this.userState.gid} ${this.userState.name} Lv${this.userState.level} 金币=${this.userState.gold}`,
             )
@@ -379,7 +385,7 @@ export class Connection extends EventEmitter {
           this.emit('login', this.userState)
           resolve()
         } catch (e: any) {
-          log('登录', `解码失败: ${e.message}`)
+          this.logger.log('登录', `解码失败: ${e.message}`)
           reject(e)
         }
       })
@@ -397,9 +403,9 @@ export class Connection extends EventEmitter {
       const timeSinceLastResponse = Date.now() - this.lastHeartbeatResponse
       if (timeSinceLastResponse > 60000) {
         this.heartbeatMissCount++
-        logWarn('心跳', `连接可能已断开 (${Math.round(timeSinceLastResponse / 1000)}s 无响应)`)
+        this.logger.logWarn('心跳', `连接可能已断开 (${Math.round(timeSinceLastResponse / 1000)}s 无响应)`)
         if (this.heartbeatMissCount >= 2) {
-          log('心跳', '超时，关闭连接触发重连...')
+          this.logger.log('心跳', '超时，关闭连接触发重连...')
           this.pendingCallbacks.forEach((entry) => {
             try {
               entry.callback(new Error('连接超时，已清理'))
@@ -425,7 +431,7 @@ export class Connection extends EventEmitter {
           const reply = types.HeartbeatReply.decode(replyBody) as any
           if (reply.server_time) syncServerTime(toNum(reply.server_time))
         } catch (e: any) {
-          logWarn('心跳', `解码失败: ${e.message}`)
+          this.logger.logWarn('心跳', `解码失败: ${e.message}`)
         }
       })
     }, this.config.heartbeatInterval)

@@ -1,7 +1,7 @@
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
-import { log, logWarn } from '../utils/logger.js'
+import type { ScopedLogger } from '../utils/logger.js'
 import { toNum } from '../utils/long.js'
 
 const WEATHER_NAMES: Record<number, string> = {
@@ -29,6 +29,7 @@ export class WeatherManager {
   constructor(
     private conn: Connection,
     private store: SessionStore,
+    private logger: ScopedLogger,
   ) {}
 
   async fetchTodayWeather(): Promise<void> {
@@ -47,7 +48,7 @@ export class WeatherManager {
       if (current) {
         const weatherId = toNum(current.weather)
         const name = getWeatherName(weatherId)
-        log('天气', `当前: ${name}`)
+        this.logger.log('天气', `当前: ${name}`)
         this.store.updateWeather({ currentWeatherId: weatherId, currentWeatherName: name, slots })
       }
 
@@ -57,9 +58,9 @@ export class WeatherManager {
           return `${getWeatherName(id)}${s.is_current ? '(当前)' : ''}`
         })
         .join(' → ')
-      log('天气', `今日: ${forecast}`)
+      this.logger.log('天气', `今日: ${forecast}`)
     } catch (e: any) {
-      logWarn('天气', `获取天气失败: ${e.message}`)
+      this.logger.logWarn('天气', `获取天气失败: ${e.message}`)
     }
   }
 

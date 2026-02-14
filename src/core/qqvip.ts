@@ -1,13 +1,16 @@
 import { getItemName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
-import { log, logWarn } from '../utils/logger.js'
+import type { ScopedLogger } from '../utils/logger.js'
 import { toNum } from '../utils/long.js'
 
 export class QQVipManager {
   private initTimer: ReturnType<typeof setTimeout> | null = null
 
-  constructor(private conn: Connection) {}
+  constructor(
+    private conn: Connection,
+    private logger: ScopedLogger,
+  ) {}
 
   async checkAndClaim(): Promise<void> {
     try {
@@ -19,10 +22,10 @@ export class QQVipManager {
       if (reply.claimed_today) return
       if (!reply.can_claim) return
 
-      log('会员', 'QQ会员每日礼包可领取，正在领取...')
+      this.logger.log('会员', 'QQ会员每日礼包可领取，正在领取...')
       await this.claimGift()
     } catch (e: any) {
-      logWarn('会员', `检查会员礼包失败: ${e.message}`)
+      this.logger.logWarn('会员', `检查会员礼包失败: ${e.message}`)
     }
   }
 
@@ -42,17 +45,17 @@ export class QQVipManager {
             return `${getItemName(id)}(${id})x${count}`
           })
           .join('/')
-        log('会员', `领取每日礼包: ${summary}`)
+        this.logger.log('会员', `领取每日礼包: ${summary}`)
       } else {
-        log('会员', '已领取每日礼包')
+        this.logger.log('会员', '已领取每日礼包')
       }
     } catch (e: any) {
-      logWarn('会员', `领取会员礼包失败: ${e.message}`)
+      this.logger.logWarn('会员', `领取会员礼包失败: ${e.message}`)
     }
   }
 
   private onGiftStatusChanged = (): void => {
-    log('会员', '收到礼包状态推送，检查可领取...')
+    this.logger.log('会员', '收到礼包状态推送，检查可领取...')
     setTimeout(() => this.checkAndClaim(), 500)
   }
 

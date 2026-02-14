@@ -2,7 +2,8 @@ import { getItemName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
-import { log, logWarn, sleep } from '../utils/logger.js'
+import type { ScopedLogger } from '../utils/logger.js'
+import { sleep } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 
 export class TaskManager {
@@ -12,6 +13,7 @@ export class TaskManager {
   constructor(
     private conn: Connection,
     private store: SessionStore,
+    private logger: ScopedLogger,
   ) {}
 
   async getTaskInfo(): Promise<any> {
@@ -78,13 +80,13 @@ export class TaskManager {
       this.syncTaskList(allTasks)
       const claimable = this.analyzeTaskList(allTasks)
       if (claimable.length) {
-        log('任务', `发现 ${claimable.length} 个可领取任务`)
+        this.logger.log('任务', `发现 ${claimable.length} 个可领取任务`)
         await this.claimTasksFromList(claimable)
       }
       // 检查活跃度奖励
       await this.checkAndClaimActives(taskInfo.actives || [])
     } catch (e: any) {
-      logWarn('任务', `检查任务失败: ${e.message}`)
+      this.logger.logWarn('任务', `检查任务失败: ${e.message}`)
     }
   }
 
@@ -97,16 +99,16 @@ export class TaskManager {
       if (!claimable.length) continue
       const pointIds = claimable.map((r: any) => toNum(r.point_id))
       const typeName = activeType === 1 ? '日活跃' : activeType === 2 ? '周活跃' : `活跃${activeType}`
-      log('活跃', `${typeName} 发现 ${claimable.length} 个可领取奖励`)
+      this.logger.log('活跃', `${typeName} 发现 ${claimable.length} 个可领取奖励`)
       try {
         const reply = (await this.claimDailyReward(activeType, pointIds)) as any
         const items = reply.items || []
         if (items.length > 0) {
           const rewardStr = this.getRewardSummary(items)
-          log('活跃', `${typeName} 领取: ${rewardStr}`)
+          this.logger.log('活跃', `${typeName} 领取: ${rewardStr}`)
         }
       } catch (e: any) {
-        logWarn('活跃', `${typeName} 领取失败: ${e.message}`)
+        this.logger.logWarn('活跃', `${typeName} 领取失败: ${e.message}`)
       }
     }
   }
@@ -119,10 +121,10 @@ export class TaskManager {
         const claimReply = (await this.claimTaskReward(task.id, useShare)) as any
         const items = claimReply.items || []
         const rewardStr = items.length > 0 ? this.getRewardSummary(items) : '无'
-        log('任务', `领取: ${task.desc}${multipleStr} → ${rewardStr}`)
+        this.logger.log('任务', `领取: ${task.desc}${multipleStr} → ${rewardStr}`)
         await sleep(300)
       } catch (e: any) {
-        logWarn('任务', `领取失败 #${task.id}: ${e.message}`)
+        this.logger.logWarn('任务', `领取失败 #${task.id}: ${e.message}`)
       }
     }
   }
@@ -149,7 +151,7 @@ export class TaskManager {
     const actives = taskInfo.actives || []
 
     if (!hasClaimable && !actives.length) return
-    if (hasClaimable) log('任务', `有 ${claimable.length} 个任务可领取，准备自动领取...`)
+    if (hasClaimable) this.logger.log('任务', `有 ${claimable.length} 个任务可领取，准备自动领取...`)
 
     this.claimTimer = setTimeout(async () => {
       this.claimTimer = null

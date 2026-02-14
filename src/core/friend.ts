@@ -5,7 +5,8 @@ import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
 import { getDateKey } from '../utils/format.js'
-import { log, logWarn, setCurrentAccountLabel, sleep } from '../utils/logger.js'
+import type { ScopedLogger } from '../utils/logger.js'
+import { sleep } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 import type { FarmManager } from './farm.js'
 
@@ -29,12 +30,13 @@ export class FriendManager {
     private store: SessionStore,
     private farm: FarmManager,
     private getAccountConfig: () => AccountConfig,
+    private logger: ScopedLogger,
   ) {}
 
   private checkDailyReset(): void {
     const today = getDateKey()
     if (this.lastResetDate !== today) {
-      if (this.lastResetDate !== '') log('系统', '跨日重置，清空操作限制缓存')
+      if (this.lastResetDate !== '') this.logger.log('系统', '跨日重置，清空操作限制缓存')
       this.operationLimits.clear()
       this.expExhausted.clear()
       this.expTracker.clear()
@@ -60,7 +62,7 @@ export class FriendManager {
         this.expTracker.delete(id)
         if (newExpTimes <= prevExpTimes && !this.expExhausted.has(id)) {
           this.expExhausted.add(id)
-          log('限制', `${OP_NAMES[id] || `#${id}`} 经验已耗尽 (已获${newExpTimes}次)`)
+          this.logger.log('限制', `${OP_NAMES[id] || `#${id}`} 经验已耗尽 (已获${newExpTimes}次)`)
         }
       }
     }
@@ -237,7 +239,7 @@ export class FriendManager {
     try {
       enterReply = await this.enterFriendFarm(friend.gid)
     } catch (e: any) {
-      logWarn('好友', `进入 ${friend.name} 农场失败: ${e.message}`)
+      this.logger.logWarn('好友', `进入 ${friend.name} 农场失败: ${e.message}`)
       return
     }
     const lands = enterReply.lands || []
@@ -305,7 +307,7 @@ export class FriendManager {
       }
     }
     if (actions.length > 0) {
-      log('好友', `${friend.name}: ${actions.join('/')}`)
+      this.logger.log('好友', `${friend.name}: ${actions.join('/')}`)
       this.store.updateFriendActions(friend.gid, actions)
     }
     await this.leaveFriendFarm(friend.gid)
@@ -314,13 +316,12 @@ export class FriendManager {
   async checkFriends(): Promise<void> {
     if (this.isChecking || !this.conn.userState.gid) return
     this.isChecking = true
-    setCurrentAccountLabel(this.conn.userState.name || `GID:${this.conn.userState.gid}`)
     this.checkDailyReset()
     try {
       const friendsReply = await this.getAllFriends()
       const friends = (friendsReply as any).game_friends || []
       if (!friends.length) {
-        log('好友', '没有好友')
+        this.logger.log('好友', '没有好友')
         return
       }
       const state = this.conn.userState
@@ -374,7 +375,7 @@ export class FriendManager {
       if (totalActions.水) summary.push(`浇水${totalActions.水}`)
       if (totalActions.放草) summary.push(`放草${totalActions.放草}`)
       if (totalActions.放虫) summary.push(`放虫${totalActions.放虫}`)
-      if (summary.length > 0) log('好友', `巡查 ${friendsToVisit.length} 人 → ${summary.join('/')}`)
+      if (summary.length > 0) this.logger.log('好友', `巡查 ${friendsToVisit.length} 人 → ${summary.join('/')}`)
       this.store.addFriendStats({
         steal: totalActions.steal || 0,
         weed: totalActions.草 || 0,
@@ -382,7 +383,7 @@ export class FriendManager {
         water: totalActions.水 || 0,
       })
     } catch (err: any) {
-      logWarn('好友', `巡查失败: ${err.message}`)
+      this.logger.logWarn('好友', `巡查失败: ${err.message}`)
     } finally {
       this.isChecking = false
     }
@@ -404,7 +405,7 @@ export class FriendManager {
 
   private onFriendApplicationReceived = (applications: any[]): void => {
     const names = applications.map((a: any) => a.name || `GID:${toNum(a.gid)}`).join(', ')
-    log('申请', `收到 ${applications.length} 个好友申请: ${names}`)
+    this.logger.log('申请', `收到 ${applications.length} 个好友申请: ${names}`)
     const gids = applications.map((a: any) => toNum(a.gid))
     this.acceptFriendsWithRetry(gids)
   }
@@ -415,7 +416,7 @@ export class FriendManager {
       const applications = reply.applications || []
       if (!applications.length) return
       const names = applications.map((a: any) => a.name || `GID:${toNum(a.gid)}`).join(', ')
-      log('申请', `发现 ${applications.length} 个待处理申请: ${names}`)
+      this.logger.log('申请', `发现 ${applications.length} 个待处理申请: ${names}`)
       await this.acceptFriendsWithRetry(applications.map((a: any) => toNum(a.gid)))
     } catch {}
   }
@@ -427,10 +428,10 @@ export class FriendManager {
       const friends = reply.friends || []
       if (friends.length > 0) {
         const names = friends.map((f: any) => f.name || f.remark || `GID:${toNum(f.gid)}`).join(', ')
-        log('申请', `已同意 ${friends.length} 人: ${names}`)
+        this.logger.log('申请', `已同意 ${friends.length} 人: ${names}`)
       }
     } catch (e: any) {
-      logWarn('申请', `同意失败: ${e.message}`)
+      this.logger.logWarn('申请', `同意失败: ${e.message}`)
     }
   }
 

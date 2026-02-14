@@ -2,7 +2,7 @@ import { config, getDefaultAccountConfig, loadAccountConfig, updateAccountConfig
 import type { AccountConfig } from '../config/schema.js'
 import { Connection } from '../protocol/connection.js'
 import { SessionStore } from '../store/session-store.js'
-import { log, logWarn, onLog } from '../utils/logger.js'
+import { type ScopedLogger, createScopedLogger, log, logWarn, onLog } from '../utils/logger.js'
 import { EmailManager } from './email.js'
 import { FarmManager } from './farm.js'
 import { FriendManager } from './friend.js'
@@ -38,6 +38,7 @@ export class Session {
   private stopped = false
   private reconnecting = false
   private readonly options: SessionOptions
+  private readonly logger: ScopedLogger
 
   constructor(
     readonly id: string,
@@ -47,17 +48,19 @@ export class Session {
     this.options = options ?? {}
     this.accountConfig = getDefaultAccountConfig()
     const getAccountConfig = () => this.accountConfig
-    this.conn = new Connection(config)
+    this.logger = createScopedLogger(() => this.conn.userState.name || `GID:${this.conn.userState.gid}`)
+    const logger = this.logger
+    this.conn = new Connection(config, logger)
     this.store = new SessionStore()
-    this.farm = new FarmManager(this.conn, this.store, getAccountConfig)
-    this.friend = new FriendManager(this.conn, this.store, this.farm, getAccountConfig)
-    this.task = new TaskManager(this.conn, this.store)
-    this.warehouse = new WarehouseManager(this.conn, this.store, getAccountConfig)
-    this.illustrated = new IllustratedManager(this.conn)
-    this.email = new EmailManager(this.conn)
-    this.weather = new WeatherManager(this.conn, this.store)
-    this.qqvip = new QQVipManager(this.conn)
-    this.shop = new ShopManager(this.conn, getAccountConfig)
+    this.farm = new FarmManager(this.conn, this.store, getAccountConfig, logger)
+    this.friend = new FriendManager(this.conn, this.store, this.farm, getAccountConfig, logger)
+    this.task = new TaskManager(this.conn, this.store, logger)
+    this.warehouse = new WarehouseManager(this.conn, this.store, getAccountConfig, logger)
+    this.illustrated = new IllustratedManager(this.conn, logger)
+    this.email = new EmailManager(this.conn, logger)
+    this.weather = new WeatherManager(this.conn, this.store, logger)
+    this.qqvip = new QQVipManager(this.conn, logger)
+    this.shop = new ShopManager(this.conn, getAccountConfig, logger)
 
     // Forward connection events to store
     this.conn.on('login', (state) => this.store.updateUser(state))
@@ -78,8 +81,14 @@ export class Session {
     // Restore persisted daily stats
     this.store.restoreFriendStats()
 
-    // Forward logs to store
-    this.logUnsub = onLog((entry) => this.store.pushLog(entry))
+    // Forward logs to store (only this account's logs)
+    this.logUnsub = onLog((entry) => {
+      if (entry.accountLabel) {
+        const label = this.conn.userState.name || `GID:${this.conn.userState.gid}`
+        if (entry.accountLabel !== label) return
+      }
+      this.store.pushLog(entry)
+    })
   }
 
   async start(code: string): Promise<void> {
@@ -96,7 +105,7 @@ export class Session {
     }
 
     // Process invite codes (WX only)
-    await processInviteCodes(this.conn)
+    await processInviteCodes(this.conn, this.logger)
 
     // Start all loops
     this.startManagers()
@@ -167,7 +176,7 @@ export class Session {
       try {
         this.conn.cleanup()
         await this.conn.connect(this.code)
-        await processInviteCodes(this.conn)
+        await processInviteCodes(this.conn, this.logger)
         this.startManagers()
         log('重连', '重连成功，所有模块已恢复')
         this.reconnecting = false

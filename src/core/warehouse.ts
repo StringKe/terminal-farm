@@ -4,7 +4,7 @@ import type { AccountConfig } from '../config/schema.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
-import { log, logWarn } from '../utils/logger.js'
+import type { ScopedLogger } from '../utils/logger.js'
 import { emitRuntimeHint } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 
@@ -26,7 +26,8 @@ export class WarehouseManager {
   constructor(
     private conn: Connection,
     private store: SessionStore,
-    private getAccountConfig?: () => AccountConfig,
+    private getAccountConfig: () => AccountConfig,
+    private logger: ScopedLogger,
   ) {
     loadFruitIds()
   }
@@ -88,20 +89,19 @@ export class WarehouseManager {
       if (toSell.length) {
         const reply = await this.sellItems(toSell)
         const totalGold = this.extractGold(reply)
-        log('仓库', `出售 ${names.join(', ')}，获得 ${totalGold} 金币`)
+        this.logger.log('仓库', `出售 ${names.join(', ')}，获得 ${totalGold} 金币`)
         emitRuntimeHint(false)
       }
 
       // 自动使用背包物品（礼包/化肥）
       await this.autoUseItems(items)
     } catch (e: any) {
-      logWarn('仓库', `出售失败: ${e.message}`)
+      this.logger.logWarn('仓库', `出售失败: ${e.message}`)
     }
   }
 
   private shouldAutoUse(id: number): boolean {
-    const cfg = this.getAccountConfig?.()
-    if (!cfg) return false
+    const cfg = this.getAccountConfig()
     if (NORMAL_FERT_IDS.has(id)) return cfg.autoRefillNormalFertilizer
     if (ORGANIC_FERT_IDS.has(id)) return cfg.autoRefillOrganicFertilizer
     return cfg.autoUseGiftPacks
@@ -131,12 +131,12 @@ export class WarehouseManager {
           anyUsed = true
           if (reply.get_items?.length) {
             const rewards = reply.get_items.map((r: any) => `${getItemName(toNum(r.id))}x${toNum(r.count)}`).join(', ')
-            log('背包', `使用 ${name} → ${rewards}`)
+            this.logger.log('背包', `使用 ${name} → ${rewards}`)
           } else {
-            log('背包', `使用 ${name} x1`)
+            this.logger.log('背包', `使用 ${name} x1`)
           }
         } catch (e: any) {
-          logWarn('背包', `使用 ${name} 失败: ${e.message}`)
+          this.logger.logWarn('背包', `使用 ${name} 失败: ${e.message}`)
           break
         }
       }
@@ -145,7 +145,7 @@ export class WarehouseManager {
       try {
         await this.refreshBag()
       } catch (e: any) {
-        logWarn('背包', `刷新背包失败: ${e.message}`)
+        this.logger.logWarn('背包', `刷新背包失败: ${e.message}`)
       }
     }
   }

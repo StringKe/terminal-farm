@@ -10,10 +10,35 @@ export type LogEntry = {
   accountLabel?: string
 }
 
-let _currentAccountLabel = ''
+export interface ScopedLogger {
+  log(tag: string, msg: string): void
+  logWarn(tag: string, msg: string): void
+}
 
-export function setCurrentAccountLabel(label: string): void {
-  _currentAccountLabel = label
+export function createScopedLogger(getLabel: () => string): ScopedLogger {
+  const label = getLabel
+  return {
+    log(tag: string, msg: string): void {
+      const entry: LogEntry = {
+        timestamp: getDateTime(),
+        tag,
+        message: msg,
+        level: 'info',
+        accountLabel: label(),
+      }
+      pushEntry(entry)
+    },
+    logWarn(tag: string, msg: string): void {
+      const entry: LogEntry = {
+        timestamp: getDateTime(),
+        tag,
+        message: `⚠ ${msg}`,
+        level: 'warn',
+        accountLabel: label(),
+      }
+      pushEntry(entry)
+    },
+  }
 }
 
 type LogListener = (entry: LogEntry) => void
@@ -63,13 +88,11 @@ function pushEntry(entry: LogEntry): void {
 
 export function log(tag: string, msg: string): void {
   const entry: LogEntry = { timestamp: getDateTime(), tag, message: msg, level: 'info' }
-  if (_currentAccountLabel) entry.accountLabel = _currentAccountLabel
   pushEntry(entry)
 }
 
 export function logWarn(tag: string, msg: string): void {
   const entry: LogEntry = { timestamp: getDateTime(), tag, message: `⚠ ${msg}`, level: 'warn' }
-  if (_currentAccountLabel) entry.accountLabel = _currentAccountLabel
   pushEntry(entry)
 }
 
