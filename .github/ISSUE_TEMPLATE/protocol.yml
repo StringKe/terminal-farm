@@ -1,0 +1,41 @@
+name: 协议 / 游戏数据更新
+description: 报告协议变更、服务端更新或游戏数据过期
+labels: ["protocol"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        如果游戏更新导致 bot 无法正常工作，请在此反馈。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 描述协议或数据异常的具体表现
+      placeholder: 例如：登录后立刻断开连接，日志显示协议版本不匹配
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 抓包数据
+      description: 相关错误日志或网络抓包信息
+      render: shell
+
+  - type: input
+    id: client-version
+    attributes:
+      label: 游戏客户端版本
+      placeholder: 例如：1.6.0.14
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台
+      options:
+        - QQ
+        - 微信
+        - 均出现
+    validations:
+      required: true

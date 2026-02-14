@@ -1,0 +1,71 @@
+name: Bug 报告
+description: 报告一个问题或异常行为
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽量详细描述问题，以便快速定位。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 清晰描述遇到的问题
+      placeholder: 例如：启动后农场面板不显示地块信息
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 如何触发这个问题？
+      placeholder: |
+        1. 执行 `bun run src/main.ts --code xxx`
+        2. 等待登录成功
+        3. 查看农场面板
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 你预期应该发生什么？
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 错误信息
+      description: 粘贴终端输出或 `logs/` 目录下的相关日志
+      render: shell
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 登录平台
+      options:
+        - QQ
+        - 微信
+        - 均出现
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      placeholder: 例如：macOS 15.3 / Ubuntu 24.04 / Windows 11
+
+  - type: input
+    id: bun-version
+    attributes:
+      label: Bun 版本
+      placeholder: "执行 `bun --version` 获取"
+
+  - type: input
+    id: terminal
+    attributes:
+      label: 终端
+      placeholder: 例如：iTerm2 / Warp / Windows Terminal / Alacritty

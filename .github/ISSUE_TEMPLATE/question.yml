@@ -1,0 +1,24 @@
+name: 使用问题
+description: 使用中遇到的疑问或需要帮助
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        有问题？请先查看 README，如果仍有疑问请在此提问。
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 问题内容
+      description: 详细描述你的疑问
+      placeholder: 例如：如何获取微信登录 code？
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 相关上下文
+      description: 你的环境、配置、已尝试的方法等
+      render: shell
