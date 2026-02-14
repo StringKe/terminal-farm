@@ -342,14 +342,11 @@ export class FarmManager {
     }
     if (!available) return
 
-    // 构建该等级总地块数（用于 exp/h 模型）
-    const totalByLevel = this.buildLandDistribution(allLands)
-
-    // 按等级分组种植
+    // 按等级分组种植（exp/h 模型用全部地块数，因为 bot 一个循环处理所有地）
+    const totalLandCount = allLands.length
     for (const [lvl, landIds] of groupByLevel) {
       const levelName = LAND_LEVEL_NAMES[lvl] || `等级${lvl}`
-      const totalCount = totalByLevel.get(lvl) || landIds.length
-      const bestSeed = this.findBestSeedForLevel(available, lvl, totalCount)
+      const bestSeed = this.findBestSeedForLevel(available, lvl, totalLandCount)
       if (!bestSeed) {
         logWarn('商店', `${levelName}地块无可用种子`)
         continue
