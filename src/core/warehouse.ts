@@ -1,7 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { GOLD_ITEM_ID } from '../config/constants.js'
-import { getFruitName } from '../config/game-data.js'
+import { getAllFruitIds, getFruitName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
@@ -9,19 +7,11 @@ import { log, logWarn } from '../utils/logger.js'
 import { emitRuntimeHint } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 
-const SEED_DATA_PATH = join(import.meta.dir, '..', '..', 'tools', 'seed-shop-merged-export.json')
-
-let FRUIT_ID_SET: Set<number>
+let FRUIT_ID_SET: Set<number> | null = null
 
 function loadFruitIds(): Set<number> {
   if (FRUIT_ID_SET) return FRUIT_ID_SET
-  try {
-    const data = JSON.parse(readFileSync(SEED_DATA_PATH, 'utf8'))
-    const rows = (data?.rows || data || []) as any[]
-    FRUIT_ID_SET = new Set(rows.map((row: any) => Number(row.fruitId)).filter(Number.isFinite))
-  } catch {
-    FRUIT_ID_SET = new Set()
-  }
+  FRUIT_ID_SET = getAllFruitIds()
   return FRUIT_ID_SET
 }
 
@@ -94,6 +84,11 @@ export class WarehouseManager {
       const totalGold = this.extractGold(reply)
       log('仓库', `出售 ${names.join(', ')}，获得 ${totalGold} 金币`)
       emitRuntimeHint(false)
+      // 售卖后重新拉取背包，刷新 UI
+      try {
+        const freshBag = await this.getBag()
+        this.store.updateBag(this.getBagItems(freshBag))
+      } catch {}
     } catch (e: any) {
       logWarn('仓库', `出售失败: ${e.message}`)
     }

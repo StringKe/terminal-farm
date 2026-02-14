@@ -1,21 +1,24 @@
-import roleLevelData from '../../game-config/RoleLevel.json'
-import plantData from '../../game-config/Plant.json'
 import itemInfoData from '../../game-config/ItemInfo.json'
+import plantData from '../../game-config/Plant.json'
+import roleLevelData from '../../game-config/RoleLevel.json'
 
-interface PlantConfig {
+export interface PlantConfig {
   id: number
   name: string
   seed_id: number
   fruit: { id: number; count: number }
   exp: number
   grow_phases: string
-  level_unlock: number
+  seasons: number
+  land_level_need: number
 }
 
 interface ItemInfoConfig {
   id: number
   name: string
   type?: number
+  price?: number
+  level?: number
   description?: string
 }
 
@@ -28,6 +31,7 @@ const plantMap = new Map<number, PlantConfig>()
 const seedToPlant = new Map<number, PlantConfig>()
 const fruitToPlant = new Map<number, PlantConfig>()
 const itemInfoMap = new Map<number, ItemInfoConfig>()
+const seedItemMap = new Map<number, ItemInfoConfig>()
 let levelExpTable: number[] = []
 
 export function loadConfigs(): void {
@@ -57,9 +61,13 @@ export function loadConfigs(): void {
   try {
     const data = itemInfoData as ItemInfoConfig[]
     itemInfoMap.clear()
+    seedItemMap.clear()
     for (const item of data) {
       const id = Number(item.id) || 0
-      if (id > 0) itemInfoMap.set(id, item)
+      if (id > 0) {
+        itemInfoMap.set(id, item)
+        if (item.type === 5) seedItemMap.set(id, item)
+      }
     }
   } catch {}
 }
@@ -132,6 +140,36 @@ export function getSeedIdByPlantId(plantId: number): number | null {
 
 export function getPlantById(plantId: number): PlantConfig | undefined {
   return plantMap.get(plantId)
+}
+
+export function getAllPlants(): PlantConfig[] {
+  const result: PlantConfig[] = []
+  for (const plant of plantMap.values()) {
+    if (plant.id >= 2020000 && plant.id < 2030000) continue
+    if (plant.seed_id <= 0) continue
+    result.push(plant)
+  }
+  return result
+}
+
+export function getPlantBySeedId(seedId: number): PlantConfig | undefined {
+  return seedToPlant.get(seedId)
+}
+
+export function getSeedUnlockLevel(seedId: number): number {
+  return seedItemMap.get(seedId)?.level ?? 1
+}
+
+export function getSeedPrice(seedId: number): number {
+  return seedItemMap.get(seedId)?.price ?? 0
+}
+
+export function getAllFruitIds(): Set<number> {
+  const ids = new Set<number>()
+  for (const plant of plantMap.values()) {
+    if (plant.fruit?.id) ids.add(plant.fruit.id)
+  }
+  return ids
 }
 
 // Auto-load on import

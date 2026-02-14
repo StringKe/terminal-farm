@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink'
 import { useMemo } from 'react'
-import { getPlantingRecommendation } from '../../../tools/calc-exp-yield.js'
+import { getPlantingRecommendation } from '../../core/exp-calculator.js'
 import { PanelBox } from '../components/panel-box.js'
 
 interface CalculatorScreenProps {

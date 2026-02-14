@@ -1,5 +1,5 @@
 import { Writer } from 'protobufjs'
-import { getPlantingRecommendation } from '../../tools/calc-exp-yield.js'
+import { LAND_LEVEL_NAMES } from '../config/constants.js'
 import {
   formatGrowTime,
   getItemName,
@@ -16,6 +16,8 @@ import type { SessionStore } from '../store/session-store.js'
 import { log, logWarn, sleep } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 import { getServerTimeSec, toTimeSec } from '../utils/time.js'
+import { calculateFarmRecommendation, calculateForLandLevel, getPlantingRecommendation } from './exp-calculator.js'
+import type { LandDistribution } from './exp-calculator.js'
 
 export type OperationLimitsCallback = (limits: any[]) => void
 
@@ -167,7 +169,17 @@ export class FarmManager {
     return successCount
   }
 
-  async findBestSeed(landsCount: number): Promise<any> {
+  private buildLandDistribution(lands: any[]): LandDistribution {
+    const dist: LandDistribution = new Map()
+    for (const land of lands) {
+      if (!land.unlocked) continue
+      const lvl = toNum(land.level) || 1
+      dist.set(lvl, (dist.get(lvl) || 0) + 1)
+    }
+    return dist
+  }
+
+  private async getAvailableSeeds(): Promise<any[] | null> {
     const shopReply = await this.getShopInfo(SEED_SHOP_ID)
     if (!shopReply.goods_list?.length) {
       logWarn('商店', '种子商店无商品')
@@ -204,27 +216,32 @@ export class FarmManager {
       logWarn('商店', '没有可购买的种子')
       return null
     }
+    return available
+  }
+
+  private findBestSeedForLevel(available: any[], landLevel: number, landCount: number): any | null {
+    const state = this.conn.userState
     if (config.forceLowestLevelCrop) {
-      available.sort((a, b) => a.requiredLevel - b.requiredLevel || a.price - b.price)
-      return available[0]
+      const sorted = [...available].sort((a, b) => a.requiredLevel - b.requiredLevel || a.price - b.price)
+      return sorted[0] ?? null
     }
     try {
-      const rec = getPlantingRecommendation(state.level, landsCount ?? 18, { top: 50 })
-      const rankedSeedIds = rec.candidatesNormalFert.map((x: any) => x.seedId)
-      for (const seedId of rankedSeedIds) {
-        const hit = available.find((x) => x.seedId === seedId)
+      const ranked = calculateForLandLevel(landLevel, landCount, state.level, 50)
+      for (const rec of ranked) {
+        const hit = available.find((x: any) => x.seedId === rec.seedId)
         if (hit) return hit
       }
     } catch (e: any) {
       logWarn('商店', `经验效率推荐失败，使用兜底策略: ${e.message}`)
     }
-    if (state.level && state.level <= 28) available.sort((a, b) => a.requiredLevel - b.requiredLevel)
-    else available.sort((a, b) => b.requiredLevel - a.requiredLevel)
-    return available[0]
+    const sorted = [...available]
+    if (state.level && state.level <= 28) sorted.sort((a, b) => a.requiredLevel - b.requiredLevel)
+    else sorted.sort((a, b) => b.requiredLevel - a.requiredLevel)
+    return sorted[0] ?? null
   }
 
-  async autoPlantEmptyLands(deadLandIds: number[], emptyLandIds: number[], unlockedLandCount: number): Promise<void> {
-    let landsToPlant = [...emptyLandIds]
+  async autoPlantEmptyLands(deadLandIds: number[], emptyLandIds: number[], allLands: any[]): Promise<void> {
+    const landsToPlant = [...emptyLandIds]
     const state = this.conn.userState
     if (deadLandIds.length > 0) {
       try {
@@ -237,57 +254,88 @@ export class FarmManager {
       }
     }
     if (!landsToPlant.length) return
-    let bestSeed: any
+
+    // 构建 landId → level 映射
+    const landIdToLevel = new Map<number, number>()
+    for (const land of allLands) {
+      if (land.unlocked) landIdToLevel.set(toNum(land.id), toNum(land.level) || 1)
+    }
+
+    // 按土地等级分组
+    const groupByLevel = new Map<number, number[]>()
+    for (const landId of landsToPlant) {
+      const lvl = landIdToLevel.get(landId) ?? 1
+      const group = groupByLevel.get(lvl)
+      if (group) group.push(landId)
+      else groupByLevel.set(lvl, [landId])
+    }
+
+    // 拉取商店（只拉一次）
+    let available: any[] | null
     try {
-      bestSeed = await this.findBestSeed(unlockedLandCount)
+      available = await this.getAvailableSeeds()
     } catch (e: any) {
       logWarn('商店', `查询失败: ${e.message}`)
       return
     }
-    if (!bestSeed) return
-    const seedName = getPlantNameBySeedId(bestSeed.seedId)
-    const growTime = getPlantGrowTime(1020000 + (bestSeed.seedId - 20000))
-    const growTimeStr = growTime > 0 ? ` 生长${formatGrowTime(growTime)}` : ''
-    log('商店', `最佳种子: ${seedName} (${bestSeed.seedId}) 价格=${bestSeed.price}金币${growTimeStr}`)
-    const needCount = landsToPlant.length
-    const totalCost = bestSeed.price * needCount
-    if (totalCost > state.gold) {
-      logWarn('商店', `金币不足! 需要 ${totalCost} 金币, 当前 ${state.gold} 金币`)
-      const canBuy = Math.floor(state.gold / bestSeed.price)
-      if (canBuy <= 0) return
-      landsToPlant = landsToPlant.slice(0, canBuy)
-      log('商店', `金币有限，只种 ${canBuy} 块地`)
-    }
-    let actualSeedId = bestSeed.seedId
-    try {
-      const buyReply = await this.buyGoods(bestSeed.goodsId, landsToPlant.length, bestSeed.price)
-      if (buyReply.get_items?.length > 0) {
-        const gotItem = buyReply.get_items[0]
-        const gotId = toNum(gotItem.id)
-        const gotCount = toNum(gotItem.count)
-        log('购买', `获得物品: ${getItemName(gotId)}(${gotId}) x${gotCount}`)
-        if (gotId > 0) actualSeedId = gotId
+    if (!available) return
+
+    // 按等级分组种植
+    for (const [lvl, landIds] of groupByLevel) {
+      const levelName = LAND_LEVEL_NAMES[lvl] || `等级${lvl}`
+      const bestSeed = this.findBestSeedForLevel(available, lvl, landIds.length)
+      if (!bestSeed) {
+        logWarn('商店', `${levelName}地块无可用种子`)
+        continue
       }
-      if (buyReply.cost_items) for (const item of buyReply.cost_items) state.gold -= toNum(item.count)
+      const seedName = getPlantNameBySeedId(bestSeed.seedId)
+      const growTime = getPlantGrowTime(1020000 + (bestSeed.seedId - 20000))
+      const growTimeStr = growTime > 0 ? ` ${formatGrowTime(growTime)}` : ''
       log(
-        '购买',
-        `已购买 ${getPlantNameBySeedId(actualSeedId)}种子 x${landsToPlant.length}, 花费 ${bestSeed.price * landsToPlant.length} 金币`,
+        '商店',
+        `${levelName}x${landIds.length} 最优: ${seedName}(${bestSeed.seedId}) ${bestSeed.price}币${growTimeStr}`,
       )
-    } catch (e: any) {
-      logWarn('购买', e.message)
-      return
-    }
-    let plantedLands: number[] = []
-    try {
-      const planted = await this.plantSeeds(actualSeedId, landsToPlant)
-      log('种植', `已在 ${planted} 块地种植 (${landsToPlant.join(',')})`)
-      if (planted > 0) plantedLands = landsToPlant.slice(0, planted)
-    } catch (e: any) {
-      logWarn('种植', e.message)
-    }
-    if (plantedLands.length > 0) {
-      const fertilized = await this.fertilize(plantedLands)
-      if (fertilized > 0) log('施肥', `已为 ${fertilized}/${plantedLands.length} 块地施肥`)
+
+      let toBuy = landIds
+      const totalCost = bestSeed.price * toBuy.length
+      if (totalCost > state.gold) {
+        const canBuy = Math.floor(state.gold / bestSeed.price)
+        if (canBuy <= 0) {
+          logWarn('商店', `金币不足，跳过${levelName}地块 (需${totalCost}, 有${state.gold})`)
+          continue
+        }
+        toBuy = landIds.slice(0, canBuy)
+        log('商店', `金币有限，${levelName}只种 ${canBuy}/${landIds.length} 块`)
+      }
+
+      let actualSeedId = bestSeed.seedId
+      try {
+        const buyReply = await this.buyGoods(bestSeed.goodsId, toBuy.length, bestSeed.price)
+        if (buyReply.get_items?.length > 0) {
+          const gotItem = buyReply.get_items[0]
+          const gotId = toNum(gotItem.id)
+          const gotCount = toNum(gotItem.count)
+          log('购买', `获得: ${getItemName(gotId)}(${gotId}) x${gotCount}`)
+          if (gotId > 0) actualSeedId = gotId
+        }
+        if (buyReply.cost_items) for (const item of buyReply.cost_items) state.gold -= toNum(item.count)
+      } catch (e: any) {
+        logWarn('购买', e.message)
+        continue
+      }
+
+      let plantedLands: number[] = []
+      try {
+        const planted = await this.plantSeeds(actualSeedId, toBuy)
+        log('种植', `${levelName} 已种${planted}块 (${toBuy.join(',')})`)
+        if (planted > 0) plantedLands = toBuy.slice(0, planted)
+      } catch (e: any) {
+        logWarn('种植', e.message)
+      }
+      if (plantedLands.length > 0) {
+        const fertilized = await this.fertilize(plantedLands)
+        if (fertilized > 0) log('施肥', `${levelName} ${fertilized}/${plantedLands.length}块`)
+      }
     }
   }
 
@@ -366,6 +414,7 @@ export class FarmManager {
       const lands = landsReply.lands
       const status = this.analyzeLands(lands)
       const unlockedLandCount = lands.filter((l: any) => l?.unlocked).length
+      const landDist = this.buildLandDistribution(lands)
       this.isFirstCheck = false
       this.store.updateLands(lands)
       const statusParts: string[] = []
@@ -423,7 +472,7 @@ export class FarmManager {
       const allDeadLands = [...status.dead, ...harvestedLandIds]
       if (allDeadLands.length > 0 || status.empty.length > 0) {
         try {
-          await this.autoPlantEmptyLands(allDeadLands, status.empty, unlockedLandCount)
+          await this.autoPlantEmptyLands(allDeadLands, status.empty, lands)
           actions.push(`种植${allDeadLands.length + status.empty.length}`)
         } catch (e: any) {
           logWarn('种植', e.message)
@@ -433,10 +482,10 @@ export class FarmManager {
       if (hasWork) log('农场', `[${statusParts.join(' ')}]${actionStr}`)
       if (this.isFirstReplantLog) {
         this.isFirstReplantLog = false
-        this.logBestSeedOnStartup(unlockedLandCount)
+        this.logBestSeedOnStartup(unlockedLandCount, landDist)
       }
       if (config.autoReplantMode === 'always' && status.growing.length > 0)
-        await this.autoReplantIfNeeded(lands, unlockedLandCount, 'check')
+        await this.autoReplantIfNeeded(lands, 'check')
     } catch (err: any) {
       logWarn('巡田', `检查失败: ${err.message}`)
     } finally {
@@ -444,21 +493,28 @@ export class FarmManager {
     }
   }
 
-  private async autoReplantIfNeeded(lands: any[], unlockedLandCount: number, trigger: string): Promise<void> {
+  private async autoReplantIfNeeded(lands: any[], trigger: string): Promise<void> {
     const state = this.conn.userState
     if (config.forceLowestLevelCrop) return
-    let bestSeedId: number
-    let bestSeedName: string
+
+    // 为每个土地等级计算该等级最优种子
+    const bestSeedByLevel = new Map<number, number>()
+    const bestNameByLevel = new Map<number, string>()
+    const landDist = this.buildLandDistribution(lands)
     try {
-      const rec = getPlantingRecommendation(state.level, unlockedLandCount, { top: 50 })
-      const candidates = rec.candidatesNormalFert
-      if (!candidates?.length) return
-      bestSeedId = candidates[0].seedId
-      bestSeedName = candidates[0].name
+      const rec = calculateFarmRecommendation(landDist, { playerLevel: state.level, top: 5 })
+      for (const lvl of rec.byLevel) {
+        if (lvl.bestWithFert) {
+          bestSeedByLevel.set(lvl.landLevel, lvl.bestWithFert.seedId)
+          bestNameByLevel.set(lvl.landLevel, lvl.bestWithFert.name)
+        }
+      }
     } catch (e: any) {
       logWarn('换种', `获取推荐失败: ${e.message}`)
       return
     }
+    if (bestSeedByLevel.size === 0) return
+
     const nowSec = getServerTimeSec()
     const toReplant: number[] = []
     let protectedCount = 0
@@ -472,6 +528,11 @@ export class FarmManager {
       if (!currentPhase) continue
       const phaseVal = currentPhase.phase
       if (phaseVal < PlantPhase.SEED || phaseVal > PlantPhase.BLOOMING) continue
+
+      const landLevel = toNum(land.level) || 1
+      const bestSeedId = bestSeedByLevel.get(landLevel)
+      if (!bestSeedId) continue
+
       const plantId = toNum(plant.id)
       const currentSeedId = getSeedIdByPlantId(plantId)
       if (currentSeedId === bestSeedId) {
@@ -496,29 +557,50 @@ export class FarmManager {
       toReplant.push(id)
     }
     if (!toReplant.length) {
-      if (trigger === 'levelup')
-        log(
-          '换种',
-          `最佳种子: ${bestSeedName}(${bestSeedId}), 无需换种 (最优${alreadyBestCount}, 保护${protectedCount})`,
-        )
+      if (trigger === 'levelup') {
+        const parts: string[] = []
+        for (const [lvl, name] of bestNameByLevel) {
+          const levelName = LAND_LEVEL_NAMES[lvl] || `等级${lvl}`
+          parts.push(`${levelName}→${name}`)
+        }
+        log('换种', `无需换种 (最优${alreadyBestCount}, 保护${protectedCount}): ${parts.join(', ')}`)
+      }
       return
     }
-    log('换种', `铲除${toReplant.length}块, 保护${protectedCount}块, 新种: ${bestSeedName}(${bestSeedId})`)
+    const parts: string[] = []
+    for (const [lvl, name] of bestNameByLevel) {
+      const levelName = LAND_LEVEL_NAMES[lvl] || `等级${lvl}`
+      parts.push(`${levelName}→${name}`)
+    }
+    log('换种', `铲除${toReplant.length}块, 保护${protectedCount}块: ${parts.join(', ')}`)
     try {
-      await this.autoPlantEmptyLands(toReplant, [], unlockedLandCount)
+      await this.autoPlantEmptyLands(toReplant, [], lands)
     } catch (e: any) {
       logWarn('换种', `操作失败: ${e.message}`)
     }
   }
 
-  private logBestSeedOnStartup(unlockedLandCount: number): void {
+  private logBestSeedOnStartup(unlockedLandCount: number, landDistribution?: LandDistribution): void {
     const state = this.conn.userState
     if (config.forceLowestLevelCrop) return
     try {
-      const rec = getPlantingRecommendation(state.level, unlockedLandCount, { top: 50 })
-      const best = rec.candidatesNormalFert?.[0]
-      if (best)
-        log('换种', `Lv${state.level} 最佳种子: ${best.name}(${best.seedId}) ${best.expPerHour.toFixed(2)}exp/h`)
+      if (landDistribution && landDistribution.size > 0) {
+        const rec = calculateFarmRecommendation(landDistribution, { playerLevel: state.level, top: 5 })
+        const parts: string[] = []
+        for (const lvl of rec.byLevel) {
+          const name = LAND_LEVEL_NAMES[lvl.landLevel] || `等级${lvl.landLevel}`
+          const best = lvl.bestWithFert
+          if (best) parts.push(`${name}x${lvl.landCount}→${best.name} ${best.expPerHourWithFert.toFixed(1)}exp/h`)
+        }
+        if (parts.length > 0) {
+          log('推荐', `Lv${state.level} 总计${rec.totalExpPerHourWithFert.toFixed(1)}exp/h: ${parts.join(', ')}`)
+        }
+      } else {
+        const rec = getPlantingRecommendation(state.level, unlockedLandCount, { top: 50 })
+        const best = rec.candidatesNormalFert?.[0]
+        if (best)
+          log('推荐', `Lv${state.level} 最佳种子: ${best.name}(${best.seedId}) ${best.expPerHour.toFixed(2)}exp/h`)
+      }
     } catch {}
   }
 
@@ -539,19 +621,28 @@ export class FarmManager {
       const landsReply = await this.getAllLands()
       if (!landsReply.lands?.length) return
       const lands = landsReply.lands
-      const unlockedLandCount = lands.filter((l: any) => l?.unlocked).length
-      let oldBest: any
-      let newBest: any
+      const landDist = this.buildLandDistribution(lands)
+      // 对比新旧等级下每个土地等级的最优是否有变化
+      let changed = false
       try {
-        oldBest = getPlantingRecommendation(oldLevel, unlockedLandCount, { top: 50 }).candidatesNormalFert?.[0]
-        newBest = getPlantingRecommendation(newLevel, unlockedLandCount, { top: 50 }).candidatesNormalFert?.[0]
+        const oldRec = calculateFarmRecommendation(landDist, { playerLevel: oldLevel, top: 1 })
+        const newRec = calculateFarmRecommendation(landDist, { playerLevel: newLevel, top: 1 })
+        for (const newLvl of newRec.byLevel) {
+          const oldLvl = oldRec.byLevel.find((l) => l.landLevel === newLvl.landLevel)
+          if (oldLvl?.bestWithFert?.seedId !== newLvl.bestWithFert?.seedId) {
+            const levelName = LAND_LEVEL_NAMES[newLvl.landLevel] || `等级${newLvl.landLevel}`
+            const oldName = oldLvl?.bestWithFert?.name ?? '无'
+            const newName = newLvl.bestWithFert?.name ?? '无'
+            log('换种', `Lv${oldLevel}→Lv${newLevel} ${levelName}最优变化: ${oldName}→${newName}`)
+            changed = true
+          }
+        }
       } catch {}
-      if (oldBest && newBest && oldBest.seedId === newBest.seedId) {
-        log('换种', `Lv${oldLevel}→Lv${newLevel} 最佳种子未变: ${newBest.name}(${newBest.seedId})`)
+      if (!changed) {
+        log('换种', `Lv${oldLevel}→Lv${newLevel} 各等级最优种子未变`)
         return
       }
-      if (oldBest && newBest) log('换种', `Lv${oldLevel}→Lv${newLevel} 最佳种子变化: ${oldBest.name}→${newBest.name}`)
-      await this.autoReplantIfNeeded(lands, unlockedLandCount, 'levelup')
+      await this.autoReplantIfNeeded(lands, 'levelup')
     } catch (e: any) {
       logWarn('换种', `升级换种失败: ${e.message}`)
     }
