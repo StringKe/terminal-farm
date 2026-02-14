@@ -1,6 +1,23 @@
 import { EventEmitter } from 'node:events'
 import type { OperationLimit, UserState } from '../protocol/types.js'
 import type { LogEntry } from '../utils/logger.js'
+import { loadDailyStats, saveDailyStats } from './persist.js'
+
+export interface FriendInfo {
+  gid: number
+  name: string
+  level: number
+  actions: string[]
+}
+
+export interface TaskInfo {
+  id: number
+  desc: string
+  progress: number
+  totalProgress: number
+  isUnlocked: boolean
+  isClaimed: boolean
+}
 
 export interface SessionState {
   user: UserState
@@ -10,7 +27,10 @@ export interface SessionState {
   tasks: any[]
   logs: LogEntry[]
   friendPatrolProgress: { current: number; total: number }
+  friendTotal: number
   friendStats: { steal: number; weed: number; bug: number; water: number }
+  friendList: FriendInfo[]
+  taskList: TaskInfo[]
   operationLimits: Map<number, OperationLimit>
 }
 
@@ -23,7 +43,10 @@ export class SessionStore extends EventEmitter {
     tasks: [],
     logs: [],
     friendPatrolProgress: { current: 0, total: 0 },
+    friendTotal: 0,
     friendStats: { steal: 0, weed: 0, bug: 0, water: 0 },
+    friendList: [],
+    taskList: [],
     operationLimits: new Map(),
   }
 
@@ -63,9 +86,42 @@ export class SessionStore extends EventEmitter {
     this.emit('change', 'friendPatrol')
   }
 
-  updateFriendStats(stats: Partial<SessionState['friendStats']>): void {
-    Object.assign(this.state.friendStats, stats)
+  /** 累加好友统计（本轮巡查增量），并持久化到文件 */
+  addFriendStats(delta: Partial<SessionState['friendStats']>): void {
+    if (delta.steal) this.state.friendStats.steal += delta.steal
+    if (delta.weed) this.state.friendStats.weed += delta.weed
+    if (delta.bug) this.state.friendStats.bug += delta.bug
+    if (delta.water) this.state.friendStats.water += delta.water
+    saveDailyStats(this.state.friendStats)
     this.emit('change', 'friendStats')
+  }
+
+  /** 从持久化文件恢复当日统计 */
+  restoreFriendStats(): void {
+    const saved = loadDailyStats()
+    if (saved) {
+      Object.assign(this.state.friendStats, saved)
+      this.emit('change', 'friendStats')
+    }
+  }
+
+  updateFriendList(list: FriendInfo[], total?: number): void {
+    this.state.friendList = list
+    if (total !== undefined) this.state.friendTotal = total
+    this.emit('change', 'friendList')
+  }
+
+  updateFriendActions(gid: number, actions: string[]): void {
+    const friend = this.state.friendList.find((f) => f.gid === gid)
+    if (friend) {
+      friend.actions = actions
+      this.emit('change', 'friendList')
+    }
+  }
+
+  updateTaskList(list: TaskInfo[]): void {
+    this.state.taskList = list
+    this.emit('change', 'taskList')
   }
 
   resetFriendStats(): void {

@@ -1,6 +1,6 @@
 import { config } from '../config/index.js'
-import { clearCode, getQQFarmCodeByScan, loadCode, saveCode } from '../protocol/login.js'
-import { accountStore, removeSessionStore } from '../store/index.js'
+import { type QRLoginInfo, clearCode, loadCode, pollQRScanResult, requestQRLogin, saveCode } from '../protocol/login.js'
+import { accountStore, registerSessionStore, removeSessionStore } from '../store/index.js'
 import { log, logWarn } from '../utils/logger.js'
 import { Session } from './session.js'
 
@@ -17,7 +17,15 @@ export function getSession(id: string): Session | undefined {
 
 export async function addAccount(platform: 'qq' | 'wx', code: string): Promise<Session> {
   const id = `account-${nextId++}`
-  const session = new Session(id, platform)
+  const session = new Session(id, platform, {
+    onReconnectFailed: (failedId) => {
+      logWarn('账号', `账号 ${failedId} 重连失败，自动移除`)
+      removeAccount(failedId)
+    },
+  })
+
+  // 注册 store 到全局 registry，确保 UI 读取同一个实例
+  registerSessionStore(id, session.store)
 
   accountStore.addAccount({
     id,
@@ -43,8 +51,8 @@ export async function addAccount(platform: 'qq' | 'wx', code: string): Promise<S
 
     return session
   } catch (e: any) {
-    accountStore.updateAccount(id, { status: 'error' })
     logWarn('账号', `连接失败: ${e.message}`)
+    removeAccount(id)
     throw e
   }
 }
@@ -76,11 +84,21 @@ export async function autoLogin(): Promise<Session | null> {
   return null
 }
 
-export async function loginWithQR(): Promise<Session> {
+export async function loginWithQR(): Promise<{
+  qrInfo: QRLoginInfo
+  poll: () => Promise<Session>
+}> {
   log('扫码登录', '正在获取二维码...')
-  const code = await getQQFarmCodeByScan()
-  log('扫码登录', `获取成功，code=${code.substring(0, 8)}...`)
-  return addAccount('qq', code)
+  const qrInfo = await requestQRLogin()
+  log('扫码登录', '二维码已生成，等待扫码...')
+  return {
+    qrInfo,
+    poll: async () => {
+      const code = await pollQRScanResult(qrInfo.loginCode)
+      log('扫码登录', `获取成功，code=${code.substring(0, 8)}...`)
+      return addAccount('qq', code)
+    },
+  }
 }
 
 export function stopAll(): void {

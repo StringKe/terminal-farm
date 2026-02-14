@@ -131,7 +131,7 @@ export class Connection extends EventEmitter {
 
   private handleMessage(buf: Buffer): void {
     try {
-      const msg = types.GateMessage.decode(buf)
+      const msg = types.GateMessage.decode(buf) as any
       const meta = msg.meta
       if (!meta) return
 
@@ -174,7 +174,7 @@ export class Connection extends EventEmitter {
   private handleNotify(msg: any): void {
     if (!msg.body || msg.body.length === 0) return
     try {
-      const event = types.EventMessage.decode(msg.body)
+      const event = types.EventMessage.decode(msg.body) as any
       const type = event.message_type || ''
       const eventBody = event.body
 

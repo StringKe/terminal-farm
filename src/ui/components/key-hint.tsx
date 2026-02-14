@@ -1,12 +1,9 @@
 import { Box, Text } from 'ink'
 
 const HINTS = [
-  { key: 'Tab', desc: '账号' },
-  { key: 'F', desc: '农场' },
-  { key: 'B', desc: '背包' },
-  { key: 'T', desc: '任务' },
-  { key: 'L', desc: '日志' },
-  { key: 'Q', desc: '退出' },
+  { key: '←→/Tab', desc: '账号' },
+  { key: '↑↓', desc: '日志' },
+  { key: 'Q/^C', desc: '退出' },
 ]
 
 export function KeyHint() {

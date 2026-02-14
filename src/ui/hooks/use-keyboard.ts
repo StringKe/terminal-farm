@@ -1,19 +1,36 @@
 import { useInput } from 'ink'
 
-export type PanelKey = 'farm' | 'bag' | 'task' | 'log'
-
 interface KeyboardActions {
   onSwitchAccount?: (index: number) => void
-  onTogglePanel?: (panel: PanelKey) => void
-  onQuit?: () => void
   onTabNext?: () => void
+  onTabPrev?: () => void
+  onScrollLog?: (delta: number) => void
+  onQuit?: () => void
 }
 
 export function useKeyboard(actions: KeyboardActions): void {
   useInput((input, key) => {
-    // Tab: next account
-    if (key.tab) {
+    // Tab / Right arrow: next account
+    if (key.tab || key.rightArrow) {
       actions.onTabNext?.()
+      return
+    }
+
+    // Left arrow: previous account
+    if (key.leftArrow) {
+      actions.onTabPrev?.()
+      return
+    }
+
+    // Up arrow: scroll log up (older)
+    if (key.upArrow) {
+      actions.onScrollLog?.(1)
+      return
+    }
+
+    // Down arrow: scroll log down (newer)
+    if (key.downArrow) {
+      actions.onScrollLog?.(-1)
       return
     }
 
@@ -23,28 +40,8 @@ export function useKeyboard(actions: KeyboardActions): void {
       return
     }
 
-    const lower = input.toLowerCase()
-
-    // Panel toggles
-    if (lower === 'f') {
-      actions.onTogglePanel?.('farm')
-      return
-    }
-    if (lower === 'b') {
-      actions.onTogglePanel?.('bag')
-      return
-    }
-    if (lower === 't') {
-      actions.onTogglePanel?.('task')
-      return
-    }
-    if (lower === 'l') {
-      actions.onTogglePanel?.('log')
-      return
-    }
-
     // Quit
-    if (lower === 'q') {
+    if (input.toLowerCase() === 'q') {
       actions.onQuit?.()
       return
     }

@@ -52,11 +52,7 @@ if (config.apiEnabled) {
   startApiServer(config.apiPort)
 }
 
-// Disable console.log in Ink full-screen mode
-const { setConsoleOutput } = await import('./utils/logger.js')
-setConsoleOutput(false)
-
-// Render full-screen Ink app
+// Render Ink app (normal mode, no fullScreen for Warp compatibility)
 const { waitUntilExit } = render(
   React.createElement(App, {
     cliCode: cliArgs.code,

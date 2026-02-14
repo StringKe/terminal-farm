@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AccountInfo, AccountStore } from '../../store/account-store.js'
 import type { SessionState, SessionStore } from '../../store/session-store.js'
+import { type LogEntry, getLogRingBuffer, onLog } from '../../utils/logger.js'
 
 export function useSessionState(store: SessionStore | null): SessionState | null {
   const [, setTick] = useState(0)
@@ -56,4 +57,17 @@ export function useStoreField<T>(store: SessionStore | null, selector: (state: S
   }, [store, selectorRef])
 
   return value
+}
+
+/** 监听全局 logger ring buffer，每次新日志触发 re-render */
+export function useGlobalLogs(): LogEntry[] {
+  const [logs, setLogs] = useState<LogEntry[]>(() => [...getLogRingBuffer()])
+
+  useEffect(() => {
+    return onLog(() => {
+      setLogs([...getLogRingBuffer()])
+    })
+  }, [])
+
+  return logs
 }

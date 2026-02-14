@@ -55,19 +55,30 @@ async function getAuthCode(ticket: string): Promise<string> {
   return response.data.code
 }
 
-export async function getQQFarmCodeByScan(opts: { pollIntervalMs?: number; timeoutMs?: number } = {}): Promise<string> {
+export interface QRLoginInfo {
+  loginCode: string
+  url: string
+  qrText: string
+}
+
+/** 获取 QR 码信息（loginCode + url + 终端文本） */
+export async function requestQRLogin(): Promise<QRLoginInfo> {
+  const { loginCode, url } = await requestLoginCode()
+  const qrText = await new Promise<string>((resolve) => {
+    qrcodeTerminal.generate(url, { small: true }, (text: string) => {
+      resolve(text)
+    })
+  })
+  return { loginCode, url, qrText }
+}
+
+/** 轮询扫码结果，返回 auth code */
+export async function pollQRScanResult(
+  loginCode: string,
+  opts: { pollIntervalMs?: number; timeoutMs?: number } = {},
+): Promise<string> {
   const pollIntervalMs = Number(opts.pollIntervalMs) > 0 ? Number(opts.pollIntervalMs) : 2000
   const timeoutMs = Number(opts.timeoutMs) > 0 ? Number(opts.timeoutMs) : 180000
-
-  const { loginCode, url } = await requestLoginCode()
-
-  console.log('')
-  console.log('[扫码登录] 请用 QQ 扫描下方二维码确认登录:')
-  qrcodeTerminal.generate(url, { small: true })
-  console.log(
-    `[扫码登录] 若二维码显示异常，可直接打开链接: https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`,
-  )
-  console.log('')
 
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {

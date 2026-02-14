@@ -1,9 +1,12 @@
-import { Box, Text, useApp } from 'ink'
+import { Box, useApp, useInput } from 'ink'
 import { useCallback, useEffect, useState } from 'react'
 import { loadConfigs } from './config/game-data.js'
 import { config, updateConfig } from './config/index.js'
 import { addAccount, autoLogin, loginWithQR, stopAll } from './core/account.js'
+import { loadProto } from './protocol/proto-loader.js'
 import { accountStore, getSessionStore } from './store/index.js'
+import { KeyHint } from './ui/components/key-hint.js'
+import { GlobalLogPanel } from './ui/panels/log-panel.js'
 import { Dashboard } from './ui/screens/dashboard.js'
 import { LoginScreen } from './ui/screens/login.js'
 import { log } from './utils/logger.js'
@@ -21,12 +24,38 @@ export function App({ cliCode, cliPlatform }: AppProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const [qrText, setQrText] = useState<string | null>(null)
+  const [qrUrl, setQrUrl] = useState<string | null>(null)
+  const [logScroll, setLogScroll] = useState(0)
+
+  // Global Ctrl+C handler
+  const handleQuit = useCallback(() => {
+    stopAll()
+    exit()
+  }, [exit])
+
+  useInput((_input, key) => {
+    if (key.ctrl && _input === 'c') {
+      handleQuit()
+    }
+  })
+
+  const handleScrollLog = useCallback((delta: number) => {
+    setLogScroll((s) => Math.max(0, s + delta))
+  }, [])
 
   // Initialize game data and attempt auto-login
   useEffect(() => {
     let cancelled = false
 
     async function init() {
+      try {
+        await loadProto()
+        log('协议', 'Proto 加载成功')
+      } catch (e: any) {
+        log('协议', `Proto 加载失败: ${e.message}`)
+      }
+
       try {
         loadConfigs()
       } catch (e: any) {
@@ -77,11 +106,24 @@ export function App({ cliCode, cliPlatform }: AppProps) {
   const handleLoginQR = useCallback(async () => {
     setIsLoading(true)
     setError(null)
+    setQrText(null)
+    setQrUrl(null)
     try {
-      await loginWithQR()
-      setScreen('dashboard')
+      const { qrInfo, poll } = await loginWithQR()
+      // Show QR code in UI
+      setQrText(qrInfo.qrText)
+      setQrUrl(qrInfo.url)
+      // Poll in background
+      const session = await poll()
+      if (session) {
+        setQrText(null)
+        setQrUrl(null)
+        setScreen('dashboard')
+      }
     } catch (e: any) {
       setError(e.message)
+      setQrText(null)
+      setQrUrl(null)
     } finally {
       setIsLoading(false)
     }
@@ -101,22 +143,37 @@ export function App({ cliCode, cliPlatform }: AppProps) {
     }
   }, [])
 
-  const handleQuit = useCallback(() => {
-    stopAll()
-    exit()
-  }, [exit])
-
   if (!ready && !cliCode) {
     return (
-      <Box padding={1}>
-        <Text>正在初始化...</Text>
+      <Box flexDirection="column">
+        <Box padding={1}>
+          <GlobalLogPanel scrollOffset={logScroll} />
+        </Box>
       </Box>
     )
   }
 
-  if (screen === 'login') {
-    return <LoginScreen onLoginQR={handleLoginQR} onLoginCode={handleLoginCode} isLoading={isLoading} error={error} />
-  }
-
-  return <Dashboard accountStore={accountStore} getSessionStore={getSessionStore} onQuit={handleQuit} />
+  return (
+    <Box flexDirection="column">
+      {screen === 'login' ? (
+        <LoginScreen
+          onLoginQR={handleLoginQR}
+          onLoginCode={handleLoginCode}
+          isLoading={isLoading}
+          error={error}
+          qrText={qrText}
+          qrUrl={qrUrl}
+        />
+      ) : (
+        <Dashboard
+          accountStore={accountStore}
+          getSessionStore={getSessionStore}
+          onQuit={handleQuit}
+          onScrollLog={handleScrollLog}
+        />
+      )}
+      <GlobalLogPanel scrollOffset={logScroll} />
+      <KeyHint />
+    </Box>
+  )
 }

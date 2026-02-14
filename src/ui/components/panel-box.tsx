@@ -7,9 +7,10 @@ interface PanelBoxProps {
   width?: number | string
   height?: number
   borderColor?: string
+  flexGrow?: number
 }
 
-export function PanelBox({ title, children, width, height, borderColor = 'gray' }: PanelBoxProps) {
+export function PanelBox({ title, children, width, height, borderColor = 'gray', flexGrow }: PanelBoxProps) {
   return (
     <Box
       flexDirection="column"
@@ -18,6 +19,7 @@ export function PanelBox({ title, children, width, height, borderColor = 'gray' 
       width={width}
       height={height}
       paddingX={1}
+      flexGrow={flexGrow}
     >
       <Box>
         <Text bold color="cyan">

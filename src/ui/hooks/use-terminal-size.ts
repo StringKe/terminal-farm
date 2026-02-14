@@ -5,6 +5,7 @@ export interface TerminalSize {
   columns: number
   rows: number
   isNarrow: boolean
+  isWide: boolean
 }
 
 export function useTerminalSize(): TerminalSize {
@@ -13,6 +14,7 @@ export function useTerminalSize(): TerminalSize {
     columns: stdout?.columns ?? 80,
     rows: stdout?.rows ?? 24,
     isNarrow: (stdout?.columns ?? 80) < 100,
+    isWide: (stdout?.columns ?? 80) >= 120,
   }))
 
   useEffect(() => {
@@ -23,6 +25,7 @@ export function useTerminalSize(): TerminalSize {
         columns: stdout.columns,
         rows: stdout.rows,
         isNarrow: stdout.columns < 100,
+        isWide: stdout.columns >= 120,
       })
     }
 

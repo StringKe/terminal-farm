@@ -22,6 +22,20 @@ export const OP_NAMES: Record<number, string> = {
   10008: '偷菜',
 }
 
+export const LAND_LEVEL_NAMES: Record<number, string> = {
+  1: '普通',
+  2: '红土',
+  3: '黑土',
+  4: '金土',
+}
+
+export const LAND_LEVEL_COLORS: Record<number, string> = {
+  1: 'white',
+  2: 'red',
+  3: 'gray',
+  4: 'yellow',
+}
+
 export const NORMAL_FERTILIZER_ID = 1011
 export const GOLD_ITEM_ID = 1001
 export const SEED_SHOP_ID = 2

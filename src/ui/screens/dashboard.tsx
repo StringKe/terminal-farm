@@ -1,16 +1,14 @@
 import { Box, Text } from 'ink'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { config } from '../../config/index.js'
 import type { AccountStore } from '../../store/account-store.js'
 import type { SessionStore } from '../../store/session-store.js'
-import { KeyHint } from '../components/key-hint.js'
-import { type PanelKey, useKeyboard } from '../hooks/use-keyboard.js'
+import { useKeyboard } from '../hooks/use-keyboard.js'
 import { useAccounts, useSessionState } from '../hooks/use-store.js'
 import { useTerminalSize } from '../hooks/use-terminal-size.js'
 import { BagPanel } from '../panels/bag-panel.js'
 import { FarmPanel } from '../panels/farm-panel.js'
 import { FriendPanel } from '../panels/friend-panel.js'
-import { LogPanel } from '../panels/log-panel.js'
 import { StatusBar } from '../panels/status-bar.js'
 import { TaskPanel } from '../panels/task-panel.js'
 
@@ -18,17 +16,12 @@ interface DashboardProps {
   accountStore: AccountStore
   getSessionStore: (id: string) => SessionStore
   onQuit: () => void
+  onScrollLog?: (delta: number) => void
 }
 
-export function Dashboard({ accountStore, getSessionStore, onQuit }: DashboardProps) {
-  const { isNarrow } = useTerminalSize()
+export function Dashboard({ accountStore, getSessionStore, onQuit, onScrollLog }: DashboardProps) {
+  const { isNarrow, columns } = useTerminalSize()
   const { accounts, currentIndex } = useAccounts(accountStore)
-  const [panels, setPanels] = useState<Record<PanelKey, boolean>>({
-    farm: true,
-    bag: true,
-    task: true,
-    log: true,
-  })
 
   const currentAccount = accounts[currentIndex]
   const sessionStore = useMemo(
@@ -43,9 +36,11 @@ export function Dashboard({ accountStore, getSessionStore, onQuit }: DashboardPr
       const next = (currentIndex + 1) % Math.max(1, accounts.length)
       accountStore.switchTo(next)
     },
-    onTogglePanel: (panel) => {
-      setPanels((p) => ({ ...p, [panel]: !p[panel] }))
+    onTabPrev: () => {
+      const prev = (currentIndex - 1 + accounts.length) % Math.max(1, accounts.length)
+      accountStore.switchTo(prev)
     },
+    onScrollLog,
     onQuit,
   })
 
@@ -56,6 +51,16 @@ export function Dashboard({ accountStore, getSessionStore, onQuit }: DashboardPr
       </Box>
     )
   }
+
+  const friendPanel = (
+    <FriendPanel
+      progress={state.friendPatrolProgress}
+      friendTotal={state.friendTotal}
+      stats={state.friendStats}
+      friendList={state.friendList}
+      columns={columns}
+    />
+  )
 
   // Account tabs
   const accountTabs = (
@@ -75,53 +80,43 @@ export function Dashboard({ accountStore, getSessionStore, onQuit }: DashboardPr
     </Box>
   )
 
-  const farmSection = panels.farm && <FarmPanel lands={state.lands} />
-  const bagSection = panels.bag && <BagPanel items={state.bag} />
-  const taskSection = panels.task && <TaskPanel tasks={state.tasks} />
-  const friendSection = <FriendPanel progress={state.friendPatrolProgress} stats={state.friendStats} />
-  const logSection = panels.log && <LogPanel logs={state.logs} />
+  const statusBar = (
+    <StatusBar
+      user={state.user}
+      platform={currentAccount.platform}
+      apiPort={config.apiEnabled ? config.apiPort : undefined}
+    />
+  )
 
+  // Narrow: single column
   if (isNarrow) {
-    // Single-column stacked layout for narrow terminals
     return (
       <Box flexDirection="column">
         {accountTabs}
-        <StatusBar
-          user={state.user}
-          platform={currentAccount.platform}
-          apiPort={config.apiEnabled ? config.apiPort : undefined}
-        />
-        {farmSection}
-        {bagSection}
-        {taskSection}
-        {friendSection}
-        {logSection}
-        <KeyHint />
+        {statusBar}
+        <FarmPanel lands={state.lands} />
+        <BagPanel items={state.bag} />
+        <TaskPanel tasks={state.taskList} />
+        {friendPanel}
       </Box>
     )
   }
 
-  // Wide layout: farm | bag+task side by side, then friend, log
+  // Wide (>=120) or Medium (100-119): two columns
   return (
     <Box flexDirection="column">
       {accountTabs}
-      <StatusBar
-        user={state.user}
-        platform={currentAccount.platform}
-        apiPort={config.apiEnabled ? config.apiPort : undefined}
-      />
+      {statusBar}
       <Box>
         <Box flexDirection="column" flexGrow={1}>
-          {farmSection}
+          <FarmPanel lands={state.lands} flexGrow={1} />
         </Box>
-        <Box flexDirection="column" width={30}>
-          {bagSection}
-          {taskSection}
+        <Box flexDirection="column" width={32}>
+          <BagPanel items={state.bag} />
+          <TaskPanel tasks={state.taskList} />
         </Box>
       </Box>
-      {friendSection}
-      {logSection}
-      <KeyHint />
+      {friendPanel}
     </Box>
   )
 }

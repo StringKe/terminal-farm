@@ -4,6 +4,10 @@ import { SessionStore } from './session-store.js'
 export const accountStore = new AccountStore()
 const sessionStores = new Map<string, SessionStore>()
 
+export function registerSessionStore(accountId: string, store: SessionStore): void {
+  sessionStores.set(accountId, store)
+}
+
 export function getSessionStore(accountId: string): SessionStore {
   let store = sessionStores.get(accountId)
   if (!store) {

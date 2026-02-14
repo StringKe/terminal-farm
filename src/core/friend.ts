@@ -251,7 +251,10 @@ export class FriendManager {
         totalActions.steal = (totalActions.steal || 0) + ok
       }
     }
-    if (actions.length > 0) log('好友', `${friend.name}: ${actions.join('/')}`)
+    if (actions.length > 0) {
+      log('好友', `${friend.name}: ${actions.join('/')}`)
+      this.store.updateFriendActions(friend.gid, actions)
+    }
     await this.leaveFriendFarm(friend.gid)
   }
 
@@ -283,6 +286,21 @@ export class FriendManager {
           visitedGids.add(gid)
         }
       }
+      // Write full friend list to store for UI (preserve existing actions)
+      const existingActions = new Map(this.store.state.friendList.map((f) => [f.gid, f.actions]))
+      this.store.updateFriendList(
+        friends.map((f: any) => {
+          const gid = toNum(f.gid)
+          return {
+            gid,
+            name: f.remark || f.name || `GID:${gid}`,
+            level: toNum(f.level),
+            actions: existingActions.get(gid) || [],
+          }
+        }),
+        friends.length,
+      )
+
       if (!friendsToVisit.length) return
       this.store.updateFriendPatrol(0, friendsToVisit.length)
       const totalActions: Record<string, number> = {}
@@ -299,7 +317,7 @@ export class FriendManager {
       if (totalActions.虫) summary.push(`除虫${totalActions.虫}`)
       if (totalActions.水) summary.push(`浇水${totalActions.水}`)
       if (summary.length > 0) log('好友', `巡查 ${friendsToVisit.length} 人 → ${summary.join('/')}`)
-      this.store.updateFriendStats({
+      this.store.addFriendStats({
         steal: totalActions.steal || 0,
         weed: totalActions.草 || 0,
         bug: totalActions.虫 || 0,

@@ -1,6 +1,7 @@
 import { Text } from 'ink'
 import { getItemName } from '../../config/game-data.js'
 import { toNum } from '../../utils/long.js'
+import { padEndCJK } from '../../utils/string-width.js'
 import { PanelBox } from '../components/panel-box.js'
 
 interface BagPanelProps {
@@ -20,7 +21,7 @@ export function BagPanel({ items }: BagPanelProps) {
           const count = toNum(item.count)
           return (
             <Text key={idx}>
-              {getItemName(id).padEnd(12)} x{count}
+              {padEndCJK(getItemName(id), 12)} x{count.toLocaleString()}
             </Text>
           )
         })

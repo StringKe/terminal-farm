@@ -1,11 +1,15 @@
 import { getItemName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
+import type { SessionStore } from '../store/session-store.js'
 import { log, logWarn, sleep } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 
 export class TaskManager {
-  constructor(private conn: Connection) {}
+  constructor(
+    private conn: Connection,
+    private store: SessionStore,
+  ) {}
 
   async getTaskInfo(): Promise<any> {
     const body = types.TaskInfoRequest.encode(types.TaskInfoRequest.create({})).finish()
@@ -57,6 +61,7 @@ export class TaskManager {
       if (!reply.task_info) return
       const taskInfo = reply.task_info
       const allTasks = [...(taskInfo.growth_tasks || []), ...(taskInfo.daily_tasks || []), ...(taskInfo.tasks || [])]
+      this.syncTaskList(allTasks)
       const claimable = this.analyzeTaskList(allTasks)
       if (!claimable.length) return
       log('任务', `发现 ${claimable.length} 个可领取任务`)
@@ -80,9 +85,23 @@ export class TaskManager {
     }
   }
 
+  private syncTaskList(allTasks: any[]): void {
+    this.store.updateTaskList(
+      allTasks.map((t) => ({
+        id: toNum(t.id),
+        desc: t.desc || `任务#${toNum(t.id)}`,
+        progress: toNum(t.progress),
+        totalProgress: toNum(t.total_progress),
+        isUnlocked: !!t.is_unlocked,
+        isClaimed: !!t.is_claimed,
+      })),
+    )
+  }
+
   private onTaskInfoNotify = (taskInfo: any): void => {
     if (!taskInfo) return
     const allTasks = [...(taskInfo.growth_tasks || []), ...(taskInfo.daily_tasks || []), ...(taskInfo.tasks || [])]
+    this.syncTaskList(allTasks)
     const claimable = this.analyzeTaskList(allTasks)
     if (!claimable.length) return
     log('任务', `有 ${claimable.length} 个任务可领取，准备自动领取...`)

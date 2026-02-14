@@ -17,14 +17,8 @@ const MAX_RING_SIZE = 500
 let stream: WriteStream | null = null
 let currentDateKey = ''
 let disabled = false
-let consoleEnabled = true
 const ringBuffer: LogEntry[] = []
 const listeners = new Set<LogListener>()
-
-/** Ink 全屏模式下调用此函数禁用 console.log 输出 */
-export function setConsoleOutput(enabled: boolean): void {
-  consoleEnabled = enabled
-}
 
 function ensureStream(): void {
   if (disabled) return
@@ -58,13 +52,11 @@ function pushEntry(entry: LogEntry): void {
 export function log(tag: string, msg: string): void {
   const entry: LogEntry = { timestamp: getDateTime(), tag, message: msg, level: 'info' }
   pushEntry(entry)
-  if (consoleEnabled) console.log(`[${entry.timestamp}] [${tag}] ${msg}`)
 }
 
 export function logWarn(tag: string, msg: string): void {
   const entry: LogEntry = { timestamp: getDateTime(), tag, message: `⚠ ${msg}`, level: 'warn' }
   pushEntry(entry)
-  if (consoleEnabled) console.log(`[${entry.timestamp}] [${tag}] ⚠ ${msg}`)
 }
 
 export function getLogRingBuffer(): readonly LogEntry[] {
