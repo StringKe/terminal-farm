@@ -11,8 +11,11 @@ const TILE_HEIGHT = 4
 
 function formatRemaining(secsLeft: number): string {
   if (secsLeft < 60) return `${secsLeft}s`
-  if (secsLeft < 3600) return `${Math.floor(secsLeft / 60)}m`
-  return `${Math.floor(secsLeft / 3600)}h${Math.floor((secsLeft % 3600) / 60)}m`
+  const s = secsLeft % 60
+  if (secsLeft < 3600) return `${Math.floor(secsLeft / 60)}m${s}s`
+  const h = Math.floor(secsLeft / 3600)
+  const m = Math.floor((secsLeft % 3600) / 60)
+  return `${h}h${m}m${s}s`
 }
 
 function renderBar(progress: number): string {
