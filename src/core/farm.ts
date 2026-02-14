@@ -130,8 +130,11 @@ export class FarmManager {
       }
       if (landIds.length > 1) await sleep(50)
     }
-    if (lastCount >= 0 && lastCount <= 100 && this.getAccountConfig().autoRefillFertilizer) {
-      await this.refillFertilizer(fertilizerId)
+    if (lastCount >= 0 && lastCount <= 100) {
+      const cfg = this.getAccountConfig()
+      const shouldRefill =
+        fertilizerId === NORMAL_FERTILIZER_ID ? cfg.autoRefillNormalFertilizer : cfg.autoRefillOrganicFertilizer
+      if (shouldRefill) await this.refillFertilizer(fertilizerId)
     }
     return successCount
   }
@@ -148,7 +151,7 @@ export class FarmManager {
         const item = items.find((i: any) => toNum(i.id) === refillId && toNum(i.count) > 0)
         if (item) {
           const body = types.UseRequest.encode(
-            types.UseRequest.create({ item_id: toLong(refillId), count: toLong(1) }),
+            types.UseRequest.create({ item: { id: toLong(refillId), count: toLong(1) } }),
           ).finish()
           await this.conn.sendMsgAsync('gamepb.itempb.ItemService', 'Use', body)
           log('补充', `化肥补充: ${getItemName(refillId)} x1`)
@@ -389,9 +392,12 @@ export class FarmManager {
         logWarn('种植', e.message)
       }
       if (plantedLands.length > 0) {
-        const fertilized = await this.fertilize(plantedLands)
-        if (fertilized > 0) log('施肥', `${levelName} 普通 ${fertilized}/${plantedLands.length}块`)
-        if (this.getAccountConfig().useOrganicFertilizer) {
+        const fertCfg = this.getAccountConfig()
+        if (fertCfg.useNormalFertilizer) {
+          const fertilized = await this.fertilize(plantedLands)
+          if (fertilized > 0) log('施肥', `${levelName} 普通 ${fertilized}/${plantedLands.length}块`)
+        }
+        if (fertCfg.useOrganicFertilizer) {
           const orgFert = await this.fertilize(plantedLands, ORGANIC_FERTILIZER_ID)
           if (orgFert > 0) log('施肥', `${levelName} 有机 ${orgFert}/${plantedLands.length}块`)
         }

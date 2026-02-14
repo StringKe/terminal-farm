@@ -20,6 +20,7 @@ interface ItemInfoConfig {
   price?: number
   level?: number
   description?: string
+  can_use?: number
 }
 
 interface RoleLevelConfig {
@@ -170,6 +171,19 @@ export function getAllFruitIds(): Set<number> {
     if (plant.fruit?.id) ids.add(plant.fruit.id)
   }
   return ids
+}
+
+let autoUsableItemIds: Set<number> | null = null
+
+export function getAutoUsableItemIds(): Set<number> {
+  if (autoUsableItemIds) return autoUsableItemIds
+  autoUsableItemIds = new Set<number>()
+  for (const item of itemInfoMap.values()) {
+    if (item.type === 11 && (item.can_use ?? 0) >= 1) {
+      autoUsableItemIds.add(item.id)
+    }
+  }
+  return autoUsableItemIds
 }
 
 // Auto-load on import

@@ -1623,27 +1623,27 @@
             },
             "UseRequest": {
               "fields": {
-                "item_id": {
-                  "type": "int64",
+                "item": {
+                  "type": "corepb.Item",
                   "id": 1
-                },
-                "count": {
-                  "type": "int64",
-                  "id": 2
-                },
-                "land_ids": {
-                  "rule": "repeated",
-                  "type": "int64",
-                  "id": 3
                 }
               }
             },
             "UseReply": {
               "fields": {
-                "items": {
-                  "rule": "repeated",
+                "item": {
                   "type": "corepb.Item",
                   "id": 1
+                },
+                "get_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 2
+                },
+                "compensated_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 3
                 }
               }
             },

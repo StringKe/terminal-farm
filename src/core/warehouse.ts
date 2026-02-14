@@ -1,5 +1,6 @@
-import { GOLD_ITEM_ID } from '../config/constants.js'
-import { getAllFruitIds, getFruitName } from '../config/game-data.js'
+import { FERTILIZER_REFILL_ITEMS, GOLD_ITEM_ID } from '../config/constants.js'
+import { getAllFruitIds, getAutoUsableItemIds, getFruitName, getItemName } from '../config/game-data.js'
+import type { AccountConfig } from '../config/schema.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
@@ -15,6 +16,9 @@ function loadFruitIds(): Set<number> {
   return FRUIT_ID_SET
 }
 
+const NORMAL_FERT_IDS = new Set(FERTILIZER_REFILL_ITEMS[1011])
+const ORGANIC_FERT_IDS = new Set(FERTILIZER_REFILL_ITEMS[1012])
+
 export class WarehouseManager {
   private initTimer: ReturnType<typeof setTimeout> | null = null
   private sellTimer: ReturnType<typeof setInterval> | null = null
@@ -22,6 +26,7 @@ export class WarehouseManager {
   constructor(
     private conn: Connection,
     private store: SessionStore,
+    private getAccountConfig?: () => AccountConfig,
   ) {
     loadFruitIds()
   }
@@ -80,18 +85,68 @@ export class WarehouseManager {
           names.push(`${getFruitName(id)}x${count}`)
         }
       }
-      if (!toSell.length) return
-      const reply = await this.sellItems(toSell)
-      const totalGold = this.extractGold(reply)
-      log('仓库', `出售 ${names.join(', ')}，获得 ${totalGold} 金币`)
-      emitRuntimeHint(false)
-      // 售卖后重新拉取背包，刷新 UI
-      try {
-        const freshBag = await this.getBag()
-        this.store.updateBag(this.getBagItems(freshBag))
-      } catch {}
+      if (toSell.length) {
+        const reply = await this.sellItems(toSell)
+        const totalGold = this.extractGold(reply)
+        log('仓库', `出售 ${names.join(', ')}，获得 ${totalGold} 金币`)
+        emitRuntimeHint(false)
+      }
+
+      // 自动使用背包物品（礼包/化肥）
+      await this.autoUseItems(items)
     } catch (e: any) {
       logWarn('仓库', `出售失败: ${e.message}`)
+    }
+  }
+
+  private shouldAutoUse(id: number): boolean {
+    const cfg = this.getAccountConfig?.()
+    if (!cfg) return false
+    if (NORMAL_FERT_IDS.has(id)) return cfg.autoRefillNormalFertilizer
+    if (ORGANIC_FERT_IDS.has(id)) return cfg.autoRefillOrganicFertilizer
+    return cfg.autoUseGiftPacks
+  }
+
+  private async refreshBag(): Promise<void> {
+    const freshBag = await this.getBag()
+    this.store.updateBag(this.getBagItems(freshBag))
+  }
+
+  private async autoUseItems(items: any[]): Promise<void> {
+    const usableIds = getAutoUsableItemIds()
+    let anyUsed = false
+    for (const item of items) {
+      const id = toNum(item.id)
+      const count = toNum(item.count)
+      if ((!usableIds.has(id) && !NORMAL_FERT_IDS.has(id) && !ORGANIC_FERT_IDS.has(id)) || count <= 0) continue
+      if (!this.shouldAutoUse(id)) continue
+      const name = getItemName(id)
+      for (let i = 0; i < count; i++) {
+        try {
+          const body = types.UseRequest.encode(
+            types.UseRequest.create({ item: { id: toLong(id), count: toLong(1) } }),
+          ).finish()
+          const { body: replyBody } = await this.conn.sendMsgAsync('gamepb.itempb.ItemService', 'Use', body)
+          const reply = types.UseReply.decode(replyBody) as any
+          anyUsed = true
+          if (reply.get_items?.length) {
+            const rewards = reply.get_items.map((r: any) => `${getItemName(toNum(r.id))}x${toNum(r.count)}`).join(', ')
+            log('背包', `使用 ${name} → ${rewards}`)
+          } else {
+            log('背包', `使用 ${name} x1`)
+          }
+        } catch (e: any) {
+          logWarn('背包', `使用 ${name} 失败: ${e.message}`)
+          break
+        }
+      }
+    }
+    if (anyUsed) {
+      try {
+        await this.refreshBag()
+      } catch (e: any) {
+        logWarn('背包', `刷新背包失败: ${e.message}`)
+      }
     }
   }
 

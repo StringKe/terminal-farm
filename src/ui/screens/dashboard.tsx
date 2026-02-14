@@ -79,7 +79,7 @@ export function Dashboard({
         },
     onScrollLog: showSettings ? undefined : onScrollLog,
     onAddAccount: showSettings ? undefined : onAddAccount,
-    onToggleSettings: handleToggleSettings,
+    onToggleSettings: showSettings ? undefined : handleToggleSettings,
     onQuit: showSettings ? undefined : onQuit,
   })
 
@@ -87,18 +87,6 @@ export function Dashboard({
     return (
       <Box flexDirection="column" padding={1}>
         <Text dimColor>无活跃账号</Text>
-      </Box>
-    )
-  }
-
-  if (showSettings && currentSession) {
-    return (
-      <Box flexDirection="column">
-        <SettingsPanel
-          accountConfig={currentSession.accountConfig}
-          onUpdate={handleUpdateConfig}
-          onClose={handleToggleSettings}
-        />
       </Box>
     )
   }
@@ -139,8 +127,26 @@ export function Dashboard({
     />
   )
 
-  // Narrow: single column
+  const settingsPanel =
+    showSettings && currentSession ? (
+      <SettingsPanel
+        accountConfig={currentSession.accountConfig}
+        onUpdate={handleUpdateConfig}
+        onClose={handleToggleSettings}
+      />
+    ) : null
+
+  // Narrow: single column — settings replaces entire content below status
   if (isNarrow) {
+    if (settingsPanel) {
+      return (
+        <Box flexDirection="column">
+          {accountTabs}
+          {statusBar}
+          {settingsPanel}
+        </Box>
+      )
+    }
     return (
       <Box flexDirection="column">
         {accountTabs}
@@ -153,7 +159,7 @@ export function Dashboard({
     )
   }
 
-  // Wide (>=120) or Medium (100-119): two columns
+  // Wide (>=120) or Medium (100-119): settings replaces right sidebar
   return (
     <Box flexDirection="column">
       {accountTabs}
@@ -163,8 +169,12 @@ export function Dashboard({
           <FarmPanel lands={state.lands} flexGrow={1} />
         </Box>
         <Box flexDirection="column" width={32}>
-          <BagPanel items={state.bag} />
-          <TaskPanel tasks={state.taskList} />
+          {settingsPanel ?? (
+            <>
+              <BagPanel items={state.bag} />
+              <TaskPanel tasks={state.taskList} />
+            </>
+          )}
         </Box>
       </Box>
       {friendPanel}

@@ -52,7 +52,7 @@ export class Session {
     this.farm = new FarmManager(this.conn, this.store, getAccountConfig)
     this.friend = new FriendManager(this.conn, this.store, this.farm, getAccountConfig)
     this.task = new TaskManager(this.conn, this.store)
-    this.warehouse = new WarehouseManager(this.conn, this.store)
+    this.warehouse = new WarehouseManager(this.conn, this.store, getAccountConfig)
     this.illustrated = new IllustratedManager(this.conn)
     this.email = new EmailManager(this.conn)
     this.weather = new WeatherManager(this.conn, this.store)

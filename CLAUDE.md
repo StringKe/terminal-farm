@@ -128,6 +128,18 @@ chore: 升级 protobufjs 到 v8
 - **禁止**：`Co-Authored-By` 或 AI 署名
 - body 部分也使用中文，可多行说明变更原因和影响
 
+## Protobuf 协议修改规范
+
+**禁止直接修改 `src/protocol/proto-bundle.json`**，该文件是自动生成的。
+
+修改协议的正确流程：
+
+1. 编辑 `proto/*.proto` 源文件
+2. 运行 `bun run build:proto` 重新生成 `proto-bundle.json`
+3. 验证生成结果：`bunx tsc --noEmit`
+
+当需要确认协议字段的实际结构时，参考 `local/test.js`（游戏客户端反编译代码）中对应的 encode/decode 逻辑，以客户端实际使用的字段为准。
+
 ## 注意事项
 
 - QQ 支持扫码 + code 复用；微信仅一次性 code

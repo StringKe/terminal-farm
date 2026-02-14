@@ -20,10 +20,13 @@ const SETTINGS: SettingItem[] = [
   { key: 'forceLowestLevelCrop', label: '强制最低等级作物', type: 'boolean' },
   { key: 'autoReplantMode', label: '换种模式', type: 'enum', enumValues: ['levelup', 'always', false] },
   { key: 'replantProtectPercent', label: '换种保护%', type: 'number', step: 5, min: 0, max: 100 },
+  { key: 'useNormalFertilizer', label: '普通肥料', type: 'boolean' },
+  { key: 'autoRefillNormalFertilizer', label: '自动补充普通肥料', type: 'boolean' },
   { key: 'useOrganicFertilizer', label: '有机肥料', type: 'boolean' },
-  { key: 'autoRefillFertilizer', label: '自动补充肥料', type: 'boolean' },
+  { key: 'autoRefillOrganicFertilizer', label: '自动补充有机肥料', type: 'boolean' },
   { key: 'enablePutBadThings', label: '放虫放草', type: 'boolean' },
   { key: 'autoClaimFreeGifts', label: '自动领礼包', type: 'boolean' },
+  { key: 'autoUseGiftPacks', label: '自动开礼包', type: 'boolean' },
 ]
 
 interface SettingsPanelProps {
@@ -45,12 +48,50 @@ function formatValue(item: SettingItem, value: unknown): string {
 
 export function SettingsPanel({ accountConfig, onUpdate, onClose }: SettingsPanelProps) {
   const [cursor, setCursor] = useState(0)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editBuffer, setEditBuffer] = useState('')
 
   useInput((input, key) => {
-    if (input === 's' || key.escape) {
+    // === Edit mode (number field) ===
+    if (editingIndex !== null) {
+      const item = SETTINGS[editingIndex]
+      if (!item) return
+
+      if (input >= '0' && input <= '9') {
+        setEditBuffer((b) => b + input)
+        return
+      }
+
+      if (key.backspace || key.delete) {
+        setEditBuffer((b) => b.slice(0, -1))
+        return
+      }
+
+      if (key.return) {
+        const num = editBuffer === '' ? 0 : Number.parseInt(editBuffer, 10)
+        const clamped = Math.max(item.min ?? 0, Math.min(num, item.max ?? Number.MAX_SAFE_INTEGER))
+        onUpdate({ [item.key]: clamped })
+        setEditingIndex(null)
+        setEditBuffer('')
+        return
+      }
+
+      if (key.escape) {
+        setEditingIndex(null)
+        setEditBuffer('')
+        return
+      }
+
+      return
+    }
+
+    // === Navigation mode ===
+
+    if (input.toLowerCase() === 's' || key.escape) {
       onClose()
       return
     }
+
     if (key.upArrow) {
       setCursor((c) => (c - 1 + SETTINGS.length) % SETTINGS.length)
       return
@@ -78,23 +119,45 @@ export function SettingsPanel({ accountConfig, onUpdate, onClose }: SettingsPane
     }
 
     if (item.type === 'number') {
+      if (key.return || input === ' ') {
+        setEditingIndex(cursor)
+        setEditBuffer(String(accountConfig[item.key] as number))
+        return
+      }
       const step = item.step ?? 1
       const current = accountConfig[item.key] as number
-      if (key.rightArrow || input === ' ' || key.return) {
-        const next = Math.min(current + step, item.max ?? Number.MAX_SAFE_INTEGER)
-        onUpdate({ [item.key]: next })
+      if (key.rightArrow) {
+        onUpdate({ [item.key]: Math.min(current + step, item.max ?? Number.MAX_SAFE_INTEGER) })
       } else if (key.leftArrow) {
-        const next = Math.max(current - step, item.min ?? 0)
-        onUpdate({ [item.key]: next })
+        onUpdate({ [item.key]: Math.max(current - step, item.min ?? 0) })
       }
     }
   })
 
+  const isEditing = editingIndex !== null
+  const title = isEditing ? '设置 [编辑中: Enter确认 Esc取消]' : '设置 (S:关闭 ↑↓:选 Enter:改)'
+
   return (
-    <PanelBox title="设置 (S:关闭 ↑↓:选择 ←→/Enter:修改)" borderColor="yellow">
+    <PanelBox title={title} borderColor="yellow">
       {SETTINGS.map((item, i) => {
         const selected = i === cursor
         const value = accountConfig[item.key]
+        const editing = editingIndex === i
+
+        if (editing) {
+          return (
+            <Box key={item.key}>
+              <Text color="yellow" bold>
+                {'▸ '}
+                {item.label}:{' '}
+              </Text>
+              <Text color="black" backgroundColor="yellow" bold>
+                {editBuffer}▏
+              </Text>
+            </Box>
+          )
+        }
+
         const display = formatValue(item, value)
         const isOn = item.type === 'boolean' && value === true
 

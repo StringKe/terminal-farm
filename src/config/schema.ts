@@ -26,10 +26,13 @@ export const accountConfigSchema = z.object({
   forceLowestLevelCrop: z.boolean().default(false),
   autoReplantMode: z.union([z.literal('levelup'), z.literal('always'), z.literal(false)]).default('levelup'),
   replantProtectPercent: z.number().min(0).max(100).default(80),
+  useNormalFertilizer: z.boolean().default(true),
+  autoRefillNormalFertilizer: z.boolean().default(false),
   useOrganicFertilizer: z.boolean().default(false),
-  autoRefillFertilizer: z.boolean().default(false),
+  autoRefillOrganicFertilizer: z.boolean().default(false),
   enablePutBadThings: z.boolean().default(false),
   autoClaimFreeGifts: z.boolean().default(true),
+  autoUseGiftPacks: z.boolean().default(true),
 })
 
 export type DeviceInfo = z.infer<typeof deviceInfoSchema>

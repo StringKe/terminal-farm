@@ -27,13 +27,13 @@ message SellReply {
 // ============ 使用物品 ============
 
 message UseRequest {
-    int64 item_id = 1;
-    int64 count = 2;
-    repeated int64 land_ids = 3;
+    corepb.Item item = 1;  // 包含 id + count (+ uid 可选)
 }
 
 message UseReply {
-    repeated corepb.Item items = 1;
+    corepb.Item item = 1;                       // 使用的物品
+    repeated corepb.Item get_items = 2;          // 获得的物品
+    repeated corepb.Item compensated_items = 3;  // 补偿物品
 }
 
 // ============ 批量使用物品 ============
