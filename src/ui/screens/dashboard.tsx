@@ -17,9 +17,10 @@ interface DashboardProps {
   getSessionStore: (id: string) => SessionStore
   onQuit: () => void
   onScrollLog?: (delta: number) => void
+  onAddAccount?: () => void
 }
 
-export function Dashboard({ accountStore, getSessionStore, onQuit, onScrollLog }: DashboardProps) {
+export function Dashboard({ accountStore, getSessionStore, onQuit, onScrollLog, onAddAccount }: DashboardProps) {
   const { isNarrow, columns } = useTerminalSize()
   const { accounts, currentIndex } = useAccounts(accountStore)
 
@@ -41,6 +42,7 @@ export function Dashboard({ accountStore, getSessionStore, onQuit, onScrollLog }
       accountStore.switchTo(prev)
     },
     onScrollLog,
+    onAddAccount,
     onQuit,
   })
 

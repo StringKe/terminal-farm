@@ -9,11 +9,12 @@ interface LoginScreenProps {
   error: string | null
   qrText?: string | null
   qrUrl?: string | null
+  onBack?: () => void
 }
 
 type Mode = 'menu' | 'input-code' | 'qr-scan'
 
-export function LoginScreen({ onLoginQR, onLoginCode, isLoading, error, qrText, qrUrl }: LoginScreenProps) {
+export function LoginScreen({ onLoginQR, onLoginCode, isLoading, error, qrText, qrUrl, onBack }: LoginScreenProps) {
   const [mode, setMode] = useState<Mode>('menu')
   const [selected, setSelected] = useState(0)
   const [codeInput, setCodeInput] = useState('')
@@ -49,6 +50,10 @@ export function LoginScreen({ onLoginQR, onLoginCode, isLoading, error, qrText, 
     }
 
     if (effectiveMode === 'menu') {
+      if (key.escape && onBack) {
+        onBack()
+        return
+      }
       if (key.upArrow) setSelected((s) => Math.max(0, s - 1))
       if (key.downArrow) setSelected((s) => Math.min(menuItems.length - 1, s + 1))
       if (key.return) menuItems[selected].action()
@@ -119,7 +124,7 @@ export function LoginScreen({ onLoginQR, onLoginCode, isLoading, error, qrText, 
             </Text>
           ))}
           <Box marginTop={1}>
-            <Text dimColor>↑↓ 选择 Enter 确认</Text>
+            <Text dimColor>↑↓ 选择 Enter 确认{onBack ? ' Esc 返回' : ''}</Text>
           </Box>
         </PanelBox>
       ) : (

@@ -5,6 +5,7 @@ interface KeyboardActions {
   onTabNext?: () => void
   onTabPrev?: () => void
   onScrollLog?: (delta: number) => void
+  onAddAccount?: () => void
   onQuit?: () => void
 }
 
@@ -37,6 +38,12 @@ export function useKeyboard(actions: KeyboardActions): void {
     // Number keys 1-9: switch account
     if (input >= '1' && input <= '9') {
       actions.onSwitchAccount?.(Number(input) - 1)
+      return
+    }
+
+    // Add account
+    if (input === '+' || input === '=') {
+      actions.onAddAccount?.()
       return
     }
 

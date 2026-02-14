@@ -129,6 +129,13 @@ export function App({ cliCode, cliPlatform }: AppProps) {
     }
   }, [])
 
+  const handleAddAccount = useCallback(() => {
+    setScreen('login')
+    setError(null)
+    setQrText(null)
+    setQrUrl(null)
+  }, [])
+
   const handleLoginCode = useCallback(async (platform: 'qq' | 'wx', code: string) => {
     setIsLoading(true)
     setError(null)
@@ -163,6 +170,7 @@ export function App({ cliCode, cliPlatform }: AppProps) {
           error={error}
           qrText={qrText}
           qrUrl={qrUrl}
+          onBack={accountStore.getAccounts().length > 0 ? () => setScreen('dashboard') : undefined}
         />
       ) : (
         <Dashboard
@@ -170,6 +178,7 @@ export function App({ cliCode, cliPlatform }: AppProps) {
           getSessionStore={getSessionStore}
           onQuit={handleQuit}
           onScrollLog={handleScrollLog}
+          onAddAccount={handleAddAccount}
         />
       )}
       <GlobalLogPanel scrollOffset={logScroll} />
