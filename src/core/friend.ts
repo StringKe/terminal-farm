@@ -15,6 +15,7 @@ export class FriendManager {
   private isChecking = false
   private loopRunning = false
   private loopTimer: ReturnType<typeof setTimeout> | null = null
+  private acceptTimer: ReturnType<typeof setTimeout> | null = null
   private lastResetDate = ''
   private expTracker = new Map<number, number>()
   private expExhausted = new Set<number>()
@@ -382,7 +383,10 @@ export class FriendManager {
     this.farm.setOperationLimitsCallback((limits) => this.updateOperationLimits(limits))
     this.conn.on('friendApplicationReceived', this.onFriendApplicationReceived)
     this.loopTimer = setTimeout(() => this.loop(), 5000)
-    setTimeout(() => this.checkAndAcceptApplications(), 3000)
+    this.acceptTimer = setTimeout(() => {
+      this.acceptTimer = null
+      this.checkAndAcceptApplications()
+    }, 3000)
   }
 
   private async loop(): Promise<void> {
@@ -399,6 +403,10 @@ export class FriendManager {
     if (this.loopTimer) {
       clearTimeout(this.loopTimer)
       this.loopTimer = null
+    }
+    if (this.acceptTimer) {
+      clearTimeout(this.acceptTimer)
+      this.acceptTimer = null
     }
   }
 }

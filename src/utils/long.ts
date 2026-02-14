@@ -7,5 +7,5 @@ export function toLong(val: number | Long): Long {
 
 export function toNum(val: any): number {
   if (Long.isLong(val)) return val.toNumber()
-  return val || 0
+  return Number(val) || 0
 }

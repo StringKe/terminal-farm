@@ -32,6 +32,23 @@ function getLandBuff(level: number): LandBuff {
 const PLANT_TIME_PER_LAND = 0.05
 /** 收获操作耗时（秒） */
 const HARVEST_TIME = 0.1
+/** exp/h 差距在此比例内视为等价，优先短周期 */
+const EXP_EQUIV_RATIO = 0.01
+
+/** 比较两个植物的 exp/h，等价时优先短周期 */
+function compareYield(
+  a: PlantYieldAtLevel,
+  b: PlantYieldAtLevel,
+  key: 'expPerHourNoFert' | 'expPerHourWithFert',
+): number {
+  const va = a[key]
+  const vb = b[key]
+  const max = Math.max(Math.abs(va), Math.abs(vb))
+  if (max > 0 && Math.abs(vb - va) / max < EXP_EQUIV_RATIO) {
+    return a.baseGrowTimeSec - b.baseGrowTimeSec
+  }
+  return vb - va
+}
 
 export interface PlantYieldAtLevel {
   plantId: number
@@ -139,7 +156,7 @@ export function calculateForLandLevel(
     if (yield_) results.push(yield_)
   }
 
-  results.sort((a, b) => b.expPerHourWithFert - a.expPerHourWithFert)
+  results.sort((a, b) => compareYield(a, b, 'expPerHourWithFert'))
   return results.slice(0, top)
 }
 
@@ -159,7 +176,7 @@ export function calculateFarmRecommendation(
     totalLands += count
 
     const ranked = calculateForLandLevel(level, count, playerLevel, top)
-    const rankedNoFert = [...ranked].sort((a, b) => b.expPerHourNoFert - a.expPerHourNoFert)
+    const rankedNoFert = [...ranked].sort((a, b) => compareYield(a, b, 'expPerHourNoFert'))
 
     const bestNoFert = rankedNoFert[0] ?? null
     const bestWithFert = ranked[0] ?? null
@@ -210,7 +227,7 @@ export function getPlantingRecommendation(
         const existing = map.get(item.seedId)
         if (!existing || item[key] > existing[key]) map.set(item.seedId, item)
       }
-      return [...map.values()].sort((a, b) => b[key] - a[key]).slice(0, top)
+      return [...map.values()].sort((a, b) => compareYield(a, b, key)).slice(0, top)
     }
     const candidatesNoFert = dedup(allNoFert, 'expPerHourNoFert')
     const candidatesNormalFert = dedup(allWithFert, 'expPerHourWithFert')
@@ -227,7 +244,7 @@ export function getPlantingRecommendation(
 
   // 默认：所有地视为等级 1
   const ranked = calculateForLandLevel(1, lands, level, top)
-  const rankedNoFert = [...ranked].sort((a, b) => b.expPerHourNoFert - a.expPerHourNoFert)
+  const rankedNoFert = [...ranked].sort((a, b) => compareYield(a, b, 'expPerHourNoFert'))
 
   return {
     level,

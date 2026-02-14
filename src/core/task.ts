@@ -6,6 +6,9 @@ import { log, logWarn, sleep } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 
 export class TaskManager {
+  private initTimer: ReturnType<typeof setTimeout> | null = null
+  private claimTimer: ReturnType<typeof setTimeout> | null = null
+
   constructor(
     private conn: Connection,
     private store: SessionStore,
@@ -66,7 +69,9 @@ export class TaskManager {
       if (!claimable.length) return
       log('任务', `发现 ${claimable.length} 个可领取任务`)
       await this.claimTasksFromList(claimable)
-    } catch {}
+    } catch (e: any) {
+      logWarn('任务', `检查任务失败: ${e.message}`)
+    }
   }
 
   private async claimTasksFromList(claimable: any[]): Promise<void> {
@@ -105,15 +110,29 @@ export class TaskManager {
     const claimable = this.analyzeTaskList(allTasks)
     if (!claimable.length) return
     log('任务', `有 ${claimable.length} 个任务可领取，准备自动领取...`)
-    setTimeout(() => this.claimTasksFromList(claimable), 1000)
+    this.claimTimer = setTimeout(() => {
+      this.claimTimer = null
+      this.claimTasksFromList(claimable)
+    }, 1000)
   }
 
   start(): void {
     this.conn.on('taskInfoNotify', this.onTaskInfoNotify)
-    setTimeout(() => this.checkAndClaimTasks(), 4000)
+    this.initTimer = setTimeout(() => {
+      this.initTimer = null
+      this.checkAndClaimTasks()
+    }, 4000)
   }
 
   stop(): void {
     this.conn.off('taskInfoNotify', this.onTaskInfoNotify)
+    if (this.initTimer) {
+      clearTimeout(this.initTimer)
+      this.initTimer = null
+    }
+    if (this.claimTimer) {
+      clearTimeout(this.claimTimer)
+      this.claimTimer = null
+    }
   }
 }

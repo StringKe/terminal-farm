@@ -16,6 +16,7 @@ function loadFruitIds(): Set<number> {
 }
 
 export class WarehouseManager {
+  private initTimer: ReturnType<typeof setTimeout> | null = null
   private sellTimer: ReturnType<typeof setInterval> | null = null
 
   constructor(
@@ -95,14 +96,19 @@ export class WarehouseManager {
   }
 
   start(): void {
-    if (this.sellTimer) return
-    setTimeout(() => {
+    if (this.sellTimer || this.initTimer) return
+    this.initTimer = setTimeout(() => {
+      this.initTimer = null
       this.sellAllFruits()
       this.sellTimer = setInterval(() => this.sellAllFruits(), 60000)
     }, 10000)
   }
 
   stop(): void {
+    if (this.initTimer) {
+      clearTimeout(this.initTimer)
+      this.initTimer = null
+    }
     if (this.sellTimer) {
       clearInterval(this.sellTimer)
       this.sellTimer = null

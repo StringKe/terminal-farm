@@ -187,7 +187,9 @@ export class Connection extends EventEmitter {
         try {
           const notify = types.KickoutNotify.decode(eventBody)
           log('推送', `原因: ${(notify as any).reason_message || '未知'}`)
-        } catch {}
+        } catch (e: any) {
+          logWarn('推送', `Kickout 解码失败: ${e.message}`)
+        }
         this.emit('kickout')
         return
       }
@@ -200,7 +202,9 @@ export class Connection extends EventEmitter {
           if (lands.length > 0 && (hostGid === this.userState.gid || hostGid === 0)) {
             this.emit('landsChanged', lands)
           }
-        } catch {}
+        } catch (e: any) {
+          logWarn('推送', `LandsNotify 解码失败: ${e.message}`)
+        }
         return
       }
 
@@ -353,13 +357,15 @@ export class Connection extends EventEmitter {
         this.heartbeatMissCount++
         logWarn('心跳', `连接可能已断开 (${Math.round(timeSinceLastResponse / 1000)}s 无响应)`)
         if (this.heartbeatMissCount >= 2) {
-          log('心跳', '尝试重连...')
+          log('心跳', '超时，关闭连接触发重连...')
           this.pendingCallbacks.forEach((cb) => {
             try {
               cb(new Error('连接超时，已清理'))
             } catch {}
           })
           this.pendingCallbacks.clear()
+          this.ws?.close()
+          return
         }
       }
 
@@ -376,7 +382,9 @@ export class Connection extends EventEmitter {
         try {
           const reply = types.HeartbeatReply.decode(replyBody) as any
           if (reply.server_time) syncServerTime(toNum(reply.server_time))
-        } catch {}
+        } catch (e: any) {
+          logWarn('心跳', `解码失败: ${e.message}`)
+        }
       })
     }, this.config.heartbeatInterval)
   }
@@ -387,14 +395,17 @@ export class Connection extends EventEmitter {
       this.heartbeatTimer = null
     }
     this.pendingCallbacks.clear()
+    if (this.ws) {
+      this.ws.removeAllListeners()
+      try {
+        this.ws.close()
+      } catch {}
+      this.ws = null
+    }
   }
 
   close(): void {
     this.cleanup()
-    if (this.ws) {
-      this.ws.close()
-      this.ws = null
-    }
   }
 
   isConnected(): boolean {

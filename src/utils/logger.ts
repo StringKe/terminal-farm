@@ -40,7 +40,11 @@ function ensureStream(): void {
 function pushEntry(entry: LogEntry): void {
   ringBuffer.push(entry)
   if (ringBuffer.length > MAX_RING_SIZE) ringBuffer.shift()
-  for (const fn of listeners) fn(entry)
+  for (const fn of listeners) {
+    try {
+      fn(entry)
+    } catch {}
+  }
 
   ensureStream()
   if (stream) {

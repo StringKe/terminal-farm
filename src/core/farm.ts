@@ -107,7 +107,7 @@ export class FarmManager {
         await this.conn.sendMsgAsync('gamepb.plantpb.PlantService', 'Fertilize', body)
         successCount++
       } catch {
-        break
+        continue
       }
       if (landIds.length > 1) await sleep(50)
     }
@@ -250,7 +250,6 @@ export class FarmManager {
         landsToPlant.push(...deadLandIds)
       } catch (e: any) {
         logWarn('铲除', `批量铲除失败: ${e.message}`)
-        landsToPlant.push(...deadLandIds)
       }
     }
     if (!landsToPlant.length) return
@@ -601,7 +600,9 @@ export class FarmManager {
         if (best)
           log('推荐', `Lv${state.level} 最佳种子: ${best.name}(${best.seedId}) ${best.expPerHour.toFixed(2)}exp/h`)
       }
-    } catch {}
+    } catch (e: any) {
+      logWarn('推荐', `启动推荐计算失败: ${e.message}`)
+    }
   }
 
   private onLandsChangedPush = (): void => {
