@@ -9,15 +9,21 @@ import type { UserState } from './types.js'
 import { dumpNotify, dumpRaw, dumpResponse } from './ws-dumper.js'
 
 type SendCallback = (err: Error | null, body?: Uint8Array, meta?: any) => void
+interface PendingEntry {
+  callback: SendCallback
+  sentAt: number
+}
 
 export class Connection extends EventEmitter {
   private ws: WebSocket | null = null
   private clientSeq = 1
   private serverSeq = 0
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
-  private pendingCallbacks = new Map<number, SendCallback>()
+  private pendingCallbacks = new Map<number, PendingEntry>()
   private lastHeartbeatResponse = Date.now()
   private heartbeatMissCount = 0
+  private rttSamples: number[] = []
+  private static readonly MAX_RTT_SAMPLES = 20
 
   readonly userState: UserState = { gid: 0, name: '', level: 0, gold: 0, exp: 0 }
 
@@ -96,7 +102,7 @@ export class Connection extends EventEmitter {
     })
     const encoded = types.GateMessage.encode(msg).finish()
     this.clientSeq++
-    if (callback) this.pendingCallbacks.set(seq, callback)
+    if (callback) this.pendingCallbacks.set(seq, { callback, sentAt: Date.now() })
     this.ws.send(encoded)
     return true
   }
@@ -152,15 +158,18 @@ export class Connection extends EventEmitter {
         dumpResponse(meta, msg.body)
         const errorCode = toNum(meta.error_code)
         const clientSeqVal = toNum(meta.client_seq)
-        const cb = this.pendingCallbacks.get(clientSeqVal)
-        if (cb) {
+        const entry = this.pendingCallbacks.get(clientSeqVal)
+        if (entry) {
           this.pendingCallbacks.delete(clientSeqVal)
+          const rttMs = Date.now() - entry.sentAt
+          this.rttSamples.push(rttMs)
+          if (this.rttSamples.length > Connection.MAX_RTT_SAMPLES) this.rttSamples.shift()
           if (errorCode !== 0) {
-            cb(
+            entry.callback(
               new Error(`${meta.service_name}.${meta.method_name} 错误: code=${errorCode} ${meta.error_message || ''}`),
             )
           } else {
-            cb(null, msg.body, meta)
+            entry.callback(null, msg.body, meta)
           }
           return
         }
@@ -391,9 +400,9 @@ export class Connection extends EventEmitter {
         logWarn('心跳', `连接可能已断开 (${Math.round(timeSinceLastResponse / 1000)}s 无响应)`)
         if (this.heartbeatMissCount >= 2) {
           log('心跳', '超时，关闭连接触发重连...')
-          this.pendingCallbacks.forEach((cb) => {
+          this.pendingCallbacks.forEach((entry) => {
             try {
-              cb(new Error('连接超时，已清理'))
+              entry.callback(new Error('连接超时，已清理'))
             } catch {}
           })
           this.pendingCallbacks.clear()
@@ -420,6 +429,12 @@ export class Connection extends EventEmitter {
         }
       })
     }, this.config.heartbeatInterval)
+  }
+
+  getAverageRttMs(): number {
+    if (this.rttSamples.length === 0) return 150
+    const sorted = [...this.rttSamples].sort((a, b) => a - b)
+    return sorted[Math.floor(sorted.length / 2)]
   }
 
   cleanup(): void {

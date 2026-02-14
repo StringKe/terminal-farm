@@ -46,6 +46,8 @@ export async function loadProto(): Promise<void> {
   types.BagReply = root.lookupType('gamepb.itempb.BagReply')
   types.SellRequest = root.lookupType('gamepb.itempb.SellRequest')
   types.SellReply = root.lookupType('gamepb.itempb.SellReply')
+  types.UseRequest = root.lookupType('gamepb.itempb.UseRequest')
+  types.UseReply = root.lookupType('gamepb.itempb.UseReply')
   types.PlantRequest = root.lookupType('gamepb.plantpb.PlantRequest')
   types.PlantReply = root.lookupType('gamepb.plantpb.PlantReply')
   types.UpgradeLandRequest = root.lookupType('gamepb.plantpb.UpgradeLandRequest')

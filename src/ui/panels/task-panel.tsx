@@ -25,8 +25,8 @@ export function TaskPanel({ tasks }: TaskPanelProps) {
             <Text dimColor>已完成 {completed.length}</Text>
             {' / '}共{total}
           </Text>
-          {claimable.slice(0, 3).map((t) => (
-            <Text key={t.id} color="yellow">
+          {claimable.slice(0, 3).map((t, i) => (
+            <Text key={`${t.id}-${i}`} color="yellow">
               → {t.desc}
             </Text>
           ))}

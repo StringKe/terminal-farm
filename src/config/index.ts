@@ -24,9 +24,6 @@ export const config: AppConfig = {
   heartbeatInterval: 25000,
   farmCheckInterval: 1000,
   friendCheckInterval: 10000,
-  forceLowestLevelCrop: false,
-  autoReplantMode: 'levelup',
-  replantProtectPercent: 80,
   deviceInfo: {
     client_version: clientVersion,
     sys_software: 'iOS 26.2.1',
@@ -42,8 +39,18 @@ export function updateConfig(partial: Partial<AppConfig>): void {
   Object.assign(config, partial)
 }
 
-export type { AppConfig, DeviceInfo } from './schema.js'
-export { PlantPhase, PHASE_NAMES, OP_NAMES, NORMAL_FERTILIZER_ID, GOLD_ITEM_ID, SEED_SHOP_ID } from './constants.js'
+export type { AppConfig, DeviceInfo, AccountConfig } from './schema.js'
+export { accountConfigSchema } from './schema.js'
+export { loadAccountConfig, saveAccountConfig, updateAccountConfig, getDefaultAccountConfig } from './account-config.js'
+export {
+  PlantPhase,
+  PHASE_NAMES,
+  OP_NAMES,
+  NORMAL_FERTILIZER_ID,
+  ORGANIC_FERTILIZER_ID,
+  GOLD_ITEM_ID,
+  SEED_SHOP_ID,
+} from './constants.js'
 export {
   loadConfigs,
   getLevelExpTable,

@@ -46,8 +46,8 @@ export function FriendPanel({ progress, friendTotal, stats, friendList, columns 
         <Box flexDirection="column" marginTop={1}>
           {rows.map((row, ri) => (
             <Box key={ri}>
-              {row.map((f) => (
-                <Box key={f.gid} width={FRIEND_COL_WIDTH}>
+              {row.map((f, fi) => (
+                <Box key={`${f.gid}-${fi}`} width={FRIEND_COL_WIDTH}>
                   <Text>
                     {padEndCJK(f.name, 10)} <Text dimColor>Lv{f.level}</Text>
                   </Text>

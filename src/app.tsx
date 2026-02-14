@@ -2,7 +2,7 @@ import { Box, useApp, useInput } from 'ink'
 import { useCallback, useEffect, useState } from 'react'
 import { loadConfigs } from './config/game-data.js'
 import { config, updateConfig } from './config/index.js'
-import { addAccount, autoLogin, loginWithQR, stopAll } from './core/account.js'
+import { addAccount, autoLogin, getSession, loginWithQR, stopAll } from './core/account.js'
 import { loadProto } from './protocol/proto-loader.js'
 import { accountStore, getSessionStore } from './store/index.js'
 import { KeyHint } from './ui/components/key-hint.js'
@@ -176,6 +176,7 @@ export function App({ cliCode, cliPlatform }: AppProps) {
         <Dashboard
           accountStore={accountStore}
           getSessionStore={getSessionStore}
+          getSession={getSession}
           onQuit={handleQuit}
           onScrollLog={handleScrollLog}
           onAddAccount={handleAddAccount}

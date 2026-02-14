@@ -1,5 +1,5 @@
 import { Writer } from 'protobufjs'
-import { LAND_LEVEL_NAMES } from '../config/constants.js'
+import { FERTILIZER_REFILL_ITEMS, LAND_LEVEL_NAMES } from '../config/constants.js'
 import {
   formatGrowTime,
   getItemName,
@@ -9,14 +9,20 @@ import {
   getPlantNameBySeedId,
   getSeedIdByPlantId,
 } from '../config/game-data.js'
-import { NORMAL_FERTILIZER_ID, PlantPhase, SEED_SHOP_ID, config } from '../config/index.js'
+import { NORMAL_FERTILIZER_ID, ORGANIC_FERTILIZER_ID, PlantPhase, SEED_SHOP_ID, config } from '../config/index.js'
+import type { AccountConfig } from '../config/schema.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
-import { log, logWarn, sleep } from '../utils/logger.js'
+import { log, logWarn, setCurrentAccountLabel, sleep } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 import { getServerTimeSec, toTimeSec } from '../utils/time.js'
-import { calculateFarmRecommendation, calculateForLandLevel, getPlantingRecommendation } from './exp-calculator.js'
+import {
+  type OperationTiming,
+  calculateFarmRecommendation,
+  calculateForLandLevel,
+  getPlantingRecommendation,
+} from './exp-calculator.js'
 import type { LandDistribution } from './exp-calculator.js'
 
 export type OperationLimitsCallback = (limits: any[]) => void
@@ -33,10 +39,20 @@ export class FarmManager {
   constructor(
     private conn: Connection,
     private store: SessionStore,
+    private getAccountConfig: () => AccountConfig,
   ) {}
 
   setOperationLimitsCallback(cb: OperationLimitsCallback): void {
     this.onOperationLimitsUpdate = cb
+  }
+
+  private getOperationTiming(): OperationTiming {
+    return {
+      rttSec: this.conn.getAverageRttMs() / 1000,
+      sleepBetweenSec: 0.05,
+      fixedRpcCount: 3,
+      checkIntervalSec: config.farmCheckInterval / 1000,
+    }
   }
 
   async getAllLands(): Promise<any> {
@@ -96,6 +112,7 @@ export class FarmManager {
 
   async fertilize(landIds: number[], fertilizerId = NORMAL_FERTILIZER_ID): Promise<number> {
     let successCount = 0
+    let lastCount = -1
     for (const landId of landIds) {
       try {
         const body = types.FertilizeRequest.encode(
@@ -104,14 +121,43 @@ export class FarmManager {
             fertilizer_id: toLong(fertilizerId),
           }),
         ).finish()
-        await this.conn.sendMsgAsync('gamepb.plantpb.PlantService', 'Fertilize', body)
+        const { body: replyBody } = await this.conn.sendMsgAsync('gamepb.plantpb.PlantService', 'Fertilize', body)
+        const reply = types.FertilizeReply.decode(replyBody) as any
+        if (reply.fertilizer?.count != null) lastCount = toNum(reply.fertilizer.count)
         successCount++
       } catch {
         continue
       }
       if (landIds.length > 1) await sleep(50)
     }
+    if (lastCount >= 0 && lastCount <= 100 && this.getAccountConfig().autoRefillFertilizer) {
+      await this.refillFertilizer(fertilizerId)
+    }
     return successCount
+  }
+
+  private async refillFertilizer(fertilizerId: number): Promise<void> {
+    const refillItems = FERTILIZER_REFILL_ITEMS[fertilizerId]
+    if (!refillItems) return
+    try {
+      const bagBody = types.BagRequest.encode(types.BagRequest.create({})).finish()
+      const { body: bagReplyBody } = await this.conn.sendMsgAsync('gamepb.itempb.ItemService', 'Bag', bagBody)
+      const bagReply = types.BagReply.decode(bagReplyBody) as any
+      const items = bagReply.items || []
+      for (const refillId of refillItems) {
+        const item = items.find((i: any) => toNum(i.id) === refillId && toNum(i.count) > 0)
+        if (item) {
+          const body = types.UseRequest.encode(
+            types.UseRequest.create({ item_id: toLong(refillId), count: toLong(1) }),
+          ).finish()
+          await this.conn.sendMsgAsync('gamepb.itempb.ItemService', 'Use', body)
+          log('补充', `化肥补充: ${getItemName(refillId)} x1`)
+          return
+        }
+      }
+    } catch (e: any) {
+      logWarn('补充', `化肥补充失败: ${e.message}`)
+    }
   }
 
   async removePlant(landIds: number[]): Promise<any> {
@@ -221,15 +267,26 @@ export class FarmManager {
 
   private findBestSeedForLevel(available: any[], landLevel: number, landCount: number): any | null {
     const state = this.conn.userState
-    if (config.forceLowestLevelCrop) {
+    const acfg = this.getAccountConfig()
+    if (acfg.manualSeedId > 0) {
+      const manual = available.find((x: any) => x.seedId === acfg.manualSeedId)
+      if (manual) return manual
+      logWarn('商店', `手动种子ID ${acfg.manualSeedId} 不可用，回退自动选择`)
+    }
+    if (acfg.forceLowestLevelCrop) {
       const sorted = [...available].sort((a, b) => a.requiredLevel - b.requiredLevel || a.price - b.price)
       return sorted[0] ?? null
     }
     try {
-      const ranked = calculateForLandLevel(landLevel, landCount, state.level, 50)
+      const ranked = calculateForLandLevel(landLevel, landCount, state.level, 50, this.getOperationTiming())
       for (const rec of ranked) {
         const hit = available.find((x: any) => x.seedId === rec.seedId)
         if (hit) return hit
+      }
+      if (ranked.length > 0) {
+        const top3 = ranked.slice(0, 3).map((r) => `${r.name}(${r.seedId})`)
+        const shopIds = available.map((a: any) => a.seedId)
+        logWarn('商店', `推荐种子均不在商店中 推荐=[${top3.join(',')}] 商店=[${shopIds.join(',')}]`)
       }
     } catch (e: any) {
       logWarn('商店', `经验效率推荐失败，使用兜底策略: ${e.message}`)
@@ -333,7 +390,11 @@ export class FarmManager {
       }
       if (plantedLands.length > 0) {
         const fertilized = await this.fertilize(plantedLands)
-        if (fertilized > 0) log('施肥', `${levelName} ${fertilized}/${plantedLands.length}块`)
+        if (fertilized > 0) log('施肥', `${levelName} 普通 ${fertilized}/${plantedLands.length}块`)
+        if (this.getAccountConfig().useOrganicFertilizer) {
+          const orgFert = await this.fertilize(plantedLands, ORGANIC_FERTILIZER_ID)
+          if (orgFert > 0) log('施肥', `${levelName} 有机 ${orgFert}/${plantedLands.length}块`)
+        }
       }
     }
   }
@@ -404,6 +465,7 @@ export class FarmManager {
   async checkFarm(): Promise<void> {
     if (this.isChecking || !this.conn.userState.gid) return
     this.isChecking = true
+    setCurrentAccountLabel(this.conn.userState.name || `GID:${this.conn.userState.gid}`)
     try {
       const landsReply = await this.getAllLands()
       if (!landsReply.lands?.length) {
@@ -487,7 +549,7 @@ export class FarmManager {
       await this.autoUnlockLands(lands)
       await this.autoUpgradeLands(lands)
 
-      if (config.autoReplantMode === 'always' && status.growing.length > 0)
+      if (this.getAccountConfig().autoReplantMode === 'always' && status.growing.length > 0)
         await this.autoReplantIfNeeded(lands, 'check')
     } catch (err: any) {
       logWarn('巡田', `检查失败: ${err.message}`)
@@ -498,14 +560,18 @@ export class FarmManager {
 
   private async autoReplantIfNeeded(lands: any[], trigger: string): Promise<void> {
     const state = this.conn.userState
-    if (config.forceLowestLevelCrop) return
+    if (this.getAccountConfig().forceLowestLevelCrop) return
 
     // 为每个土地等级计算该等级最优种子
     const bestSeedByLevel = new Map<number, number>()
     const bestNameByLevel = new Map<number, string>()
     const landDist = this.buildLandDistribution(lands)
     try {
-      const rec = calculateFarmRecommendation(landDist, { playerLevel: state.level, top: 5 })
+      const rec = calculateFarmRecommendation(landDist, {
+        playerLevel: state.level,
+        top: 5,
+        timing: this.getOperationTiming(),
+      })
       for (const lvl of rec.byLevel) {
         if (lvl.bestWithFert) {
           bestSeedByLevel.set(lvl.landLevel, lvl.bestWithFert.seedId)
@@ -552,7 +618,7 @@ export class FarmManager {
       }
       if (matureBegin > firstPhaseBegin && firstPhaseBegin > 0) {
         const progress = ((nowSec - firstPhaseBegin) / (matureBegin - firstPhaseBegin)) * 100
-        if (progress >= config.replantProtectPercent) {
+        if (progress >= this.getAccountConfig().replantProtectPercent) {
           protectedCount++
           continue
         }
@@ -585,10 +651,14 @@ export class FarmManager {
 
   private logBestSeedOnStartup(unlockedLandCount: number, landDistribution?: LandDistribution): void {
     const state = this.conn.userState
-    if (config.forceLowestLevelCrop) return
+    if (this.getAccountConfig().forceLowestLevelCrop) return
     try {
       if (landDistribution && landDistribution.size > 0) {
-        const rec = calculateFarmRecommendation(landDistribution, { playerLevel: state.level, top: 5 })
+        const rec = calculateFarmRecommendation(landDistribution, {
+          playerLevel: state.level,
+          top: 5,
+          timing: this.getOperationTiming(),
+        })
         const parts: string[] = []
         for (const lvl of rec.byLevel) {
           const name = LAND_LEVEL_NAMES[lvl.landLevel] || `等级${lvl.landLevel}`
@@ -599,7 +669,10 @@ export class FarmManager {
           log('推荐', `Lv${state.level} 总计${rec.totalExpPerHourWithFert.toFixed(1)}exp/h: ${parts.join(', ')}`)
         }
       } else {
-        const rec = getPlantingRecommendation(state.level, unlockedLandCount, { top: 50 })
+        const rec = getPlantingRecommendation(state.level, unlockedLandCount, {
+          top: 50,
+          timing: this.getOperationTiming(),
+        })
         const best = rec.candidatesNormalFert?.[0]
         if (best)
           log('推荐', `Lv${state.level} 最佳种子: ${best.name}(${best.seedId}) ${best.expPerHour.toFixed(2)}exp/h`)
@@ -674,8 +747,9 @@ export class FarmManager {
       // 对比新旧等级下每个土地等级的最优是否有变化
       let changed = false
       try {
-        const oldRec = calculateFarmRecommendation(landDist, { playerLevel: oldLevel, top: 1 })
-        const newRec = calculateFarmRecommendation(landDist, { playerLevel: newLevel, top: 1 })
+        const timing = this.getOperationTiming()
+        const oldRec = calculateFarmRecommendation(landDist, { playerLevel: oldLevel, top: 1, timing })
+        const newRec = calculateFarmRecommendation(landDist, { playerLevel: newLevel, top: 1, timing })
         for (const newLvl of newRec.byLevel) {
           const oldLvl = oldRec.byLevel.find((l) => l.landLevel === newLvl.landLevel)
           if (oldLvl?.bestWithFert?.seedId !== newLvl.bestWithFert?.seedId) {
@@ -701,7 +775,7 @@ export class FarmManager {
     if (this.loopRunning) return
     this.loopRunning = true
     this.conn.on('landsChanged', this.onLandsChangedPush)
-    if (config.autoReplantMode === 'levelup') this.conn.on('levelUp', this.onLevelUpReplant)
+    if (this.getAccountConfig().autoReplantMode === 'levelup') this.conn.on('levelUp', this.onLevelUpReplant)
     this.loopTimer = setTimeout(() => this.loop(), 2000)
   }
 

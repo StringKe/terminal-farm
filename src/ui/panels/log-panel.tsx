@@ -31,6 +31,7 @@ export function LogPanel({ logs, maxLines = 10 }: LogPanelProps) {
         displayLogs.map((entry, i) => (
           <Box key={i}>
             <Text dimColor>{entry.timestamp} </Text>
+            {entry.accountLabel && <Text color="magenta">[{entry.accountLabel}] </Text>}
             <Text color={entry.level === 'warn' ? 'yellow' : entry.level === 'error' ? 'red' : 'white'}>
               [{entry.tag.padEnd(4)}]
             </Text>
@@ -64,6 +65,7 @@ export function GlobalLogPanel({ scrollOffset = 0, maxLines = 10 }: GlobalLogPan
         displayLogs.map((entry, i) => (
           <Box key={i}>
             <Text dimColor>{entry.timestamp} </Text>
+            {entry.accountLabel && <Text color="magenta">[{entry.accountLabel}] </Text>}
             <Text color={entry.level === 'warn' ? 'yellow' : entry.level === 'error' ? 'red' : 'white'}>
               [{entry.tag.padEnd(4)}]
             </Text>

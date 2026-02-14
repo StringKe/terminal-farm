@@ -3,6 +3,7 @@ import { Box, Text } from 'ink'
 const HINTS = [
   { key: '←→/Tab', desc: '账号' },
   { key: '+', desc: '添加' },
+  { key: 'S', desc: '设置' },
   { key: '↑↓', desc: '日志' },
   { key: 'Q/^C', desc: '退出' },
 ]

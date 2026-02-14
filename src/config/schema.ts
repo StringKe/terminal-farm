@@ -16,13 +16,22 @@ export const appConfigSchema = z.object({
   heartbeatInterval: z.number().int().positive().default(25000),
   farmCheckInterval: z.number().int().positive().default(1000),
   friendCheckInterval: z.number().int().positive().default(10000),
-  forceLowestLevelCrop: z.boolean().default(false),
-  autoReplantMode: z.union([z.literal('levelup'), z.literal('always'), z.literal(false)]).default('levelup'),
-  replantProtectPercent: z.number().min(0).max(100).default(80),
   deviceInfo: deviceInfoSchema,
   apiEnabled: z.boolean().default(false),
   apiPort: z.number().int().positive().default(3000),
 })
 
+export const accountConfigSchema = z.object({
+  manualSeedId: z.number().int().nonnegative().default(0),
+  forceLowestLevelCrop: z.boolean().default(false),
+  autoReplantMode: z.union([z.literal('levelup'), z.literal('always'), z.literal(false)]).default('levelup'),
+  replantProtectPercent: z.number().min(0).max(100).default(80),
+  useOrganicFertilizer: z.boolean().default(false),
+  autoRefillFertilizer: z.boolean().default(false),
+  enablePutBadThings: z.boolean().default(false),
+  autoClaimFreeGifts: z.boolean().default(true),
+})
+
 export type DeviceInfo = z.infer<typeof deviceInfoSchema>
 export type AppConfig = z.infer<typeof appConfigSchema>
+export type AccountConfig = z.infer<typeof accountConfigSchema>

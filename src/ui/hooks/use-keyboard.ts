@@ -6,6 +6,7 @@ interface KeyboardActions {
   onTabPrev?: () => void
   onScrollLog?: (delta: number) => void
   onAddAccount?: () => void
+  onToggleSettings?: () => void
   onQuit?: () => void
 }
 
@@ -44,6 +45,12 @@ export function useKeyboard(actions: KeyboardActions): void {
     // Add account
     if (input === '+' || input === '=') {
       actions.onAddAccount?.()
+      return
+    }
+
+    // Settings
+    if (input.toLowerCase() === 's') {
+      actions.onToggleSettings?.()
       return
     }
 

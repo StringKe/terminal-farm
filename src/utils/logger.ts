@@ -7,6 +7,13 @@ export type LogEntry = {
   tag: string
   message: string
   level: 'info' | 'warn' | 'error'
+  accountLabel?: string
+}
+
+let _currentAccountLabel = ''
+
+export function setCurrentAccountLabel(label: string): void {
+  _currentAccountLabel = label
 }
 
 type LogListener = (entry: LogEntry) => void
@@ -49,17 +56,20 @@ function pushEntry(entry: LogEntry): void {
   ensureStream()
   if (stream) {
     const level = entry.level === 'info' ? 'INFO' : entry.level === 'warn' ? 'WARN' : 'ERROR'
-    stream.write(`[${entry.timestamp}] [${level}] [${entry.tag}] ${entry.message}\n`)
+    const acct = entry.accountLabel ? ` [${entry.accountLabel}]` : ''
+    stream.write(`[${entry.timestamp}] [${level}]${acct} [${entry.tag}] ${entry.message}\n`)
   }
 }
 
 export function log(tag: string, msg: string): void {
   const entry: LogEntry = { timestamp: getDateTime(), tag, message: msg, level: 'info' }
+  if (_currentAccountLabel) entry.accountLabel = _currentAccountLabel
   pushEntry(entry)
 }
 
 export function logWarn(tag: string, msg: string): void {
   const entry: LogEntry = { timestamp: getDateTime(), tag, message: `⚠ ${msg}`, level: 'warn' }
+  if (_currentAccountLabel) entry.accountLabel = _currentAccountLabel
   pushEntry(entry)
 }
 

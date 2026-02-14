@@ -37,8 +37,14 @@ export const LAND_LEVEL_COLORS: Record<number, string> = {
 }
 
 export const NORMAL_FERTILIZER_ID = 1011
+export const ORGANIC_FERTILIZER_ID = 1012
 export const GOLD_ITEM_ID = 1001
 export const SEED_SHOP_ID = 2
+
+export const FERTILIZER_REFILL_ITEMS: Record<number, number[]> = {
+  1011: [80001, 80002, 80003, 80004],
+  1012: [80011, 80012, 80013, 80014],
+}
 
 // 运行期提示文案
 const RUNTIME_HINT_MASK = 23

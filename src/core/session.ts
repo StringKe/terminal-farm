@@ -1,4 +1,5 @@
-import { config } from '../config/index.js'
+import { config, getDefaultAccountConfig, loadAccountConfig, updateAccountConfig } from '../config/index.js'
+import type { AccountConfig } from '../config/schema.js'
 import { Connection } from '../protocol/connection.js'
 import { SessionStore } from '../store/session-store.js'
 import { log, logWarn, onLog } from '../utils/logger.js'
@@ -8,6 +9,7 @@ import { FriendManager } from './friend.js'
 import { IllustratedManager } from './illustrated.js'
 import { processInviteCodes } from './invite.js'
 import { QQVipManager } from './qqvip.js'
+import { ShopManager } from './shop.js'
 import { TaskManager } from './task.js'
 import { WarehouseManager } from './warehouse.js'
 import { WeatherManager } from './weather.js'
@@ -27,6 +29,9 @@ export class Session {
   readonly email: EmailManager
   readonly weather: WeatherManager
   readonly qqvip: QQVipManager
+  readonly shop: ShopManager
+
+  accountConfig: AccountConfig
 
   private logUnsub: (() => void) | null = null
   private code = ''
@@ -40,16 +45,19 @@ export class Session {
     options?: SessionOptions,
   ) {
     this.options = options ?? {}
+    this.accountConfig = getDefaultAccountConfig()
+    const getAccountConfig = () => this.accountConfig
     this.conn = new Connection(config)
     this.store = new SessionStore()
-    this.farm = new FarmManager(this.conn, this.store)
-    this.friend = new FriendManager(this.conn, this.store, this.farm)
+    this.farm = new FarmManager(this.conn, this.store, getAccountConfig)
+    this.friend = new FriendManager(this.conn, this.store, this.farm, getAccountConfig)
     this.task = new TaskManager(this.conn, this.store)
     this.warehouse = new WarehouseManager(this.conn, this.store)
     this.illustrated = new IllustratedManager(this.conn)
     this.email = new EmailManager(this.conn)
     this.weather = new WeatherManager(this.conn, this.store)
     this.qqvip = new QQVipManager(this.conn)
+    this.shop = new ShopManager(this.conn, getAccountConfig)
 
     // Forward connection events to store
     this.conn.on('login', (state) => this.store.updateUser(state))
@@ -80,6 +88,13 @@ export class Session {
     log('会话', `连接中... platform=${this.platform}`)
     await this.conn.connect(code)
 
+    // Load per-account config
+    const gid = this.conn.userState.gid
+    if (gid > 0) {
+      this.accountConfig = loadAccountConfig(gid)
+      log('配置', `已加载账号配置 GID=${gid}`)
+    }
+
     // Process invite codes (WX only)
     await processInviteCodes(this.conn)
 
@@ -87,6 +102,16 @@ export class Session {
     this.startManagers()
 
     log('会话', '所有模块已启动')
+  }
+
+  updateAccountConfig(partial: Partial<AccountConfig>): AccountConfig {
+    const gid = this.conn.userState.gid
+    if (gid > 0) {
+      this.accountConfig = updateAccountConfig(gid, partial)
+    } else {
+      Object.assign(this.accountConfig, partial)
+    }
+    return this.accountConfig
   }
 
   stop(): void {
@@ -109,6 +134,7 @@ export class Session {
     this.email.start()
     this.weather.start()
     this.qqvip.start()
+    this.shop.start()
   }
 
   private stopManagers(): void {
@@ -120,6 +146,7 @@ export class Session {
     this.email.stop()
     this.weather.stop()
     this.qqvip.stop()
+    this.shop.stop()
   }
 
   private async attemptReconnect(): Promise<void> {

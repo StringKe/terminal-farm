@@ -28,10 +28,25 @@ function getLandBuff(level: number): LandBuff {
   return source.get(level) ?? { timeReduction: 0, expBonus: 0, yieldBonus: 0 }
 }
 
-/** 每块地种植耗时（秒）：网络请求 ~150ms + sleep 50ms ≈ 0.2s */
-const PLANT_TIME_PER_LAND = 0.2
-/** 单次循环固定开销（秒）：收获 + 购买 + 巡检延迟 */
-const CYCLE_OVERHEAD = 0.5
+/** 操作耗时参数，用于精确建模循环周期 */
+export interface OperationTiming {
+  /** 单次 RPC 往返（秒） */
+  rttSec: number
+  /** 逐块操作间 sleep（秒） */
+  sleepBetweenSec: number
+  /** 循环固定 RPC 次数 (Harvest + ShopInfo + BuyGoods) */
+  fixedRpcCount: number
+  /** 农场巡检间隔（秒） */
+  checkIntervalSec: number
+}
+
+export const DEFAULT_TIMING: OperationTiming = {
+  rttSec: 0.15,
+  sleepBetweenSec: 0.05,
+  fixedRpcCount: 3,
+  checkIntervalSec: 1,
+}
+
 /** exp/h 差距在此比例内视为等价，优先短周期 */
 const EXP_EQUIV_RATIO = 0.01
 
@@ -93,7 +108,12 @@ function parseGrowPhases(growPhases: string): number[] {
     })
 }
 
-function calcPlantYield(plant: PlantConfig, landLevel: number, landCount: number): PlantYieldAtLevel | null {
+function calcPlantYield(
+  plant: PlantConfig,
+  landLevel: number,
+  landCount: number,
+  timing: OperationTiming = DEFAULT_TIMING,
+): PlantYieldAtLevel | null {
   const phases = parseGrowPhases(plant.grow_phases)
   const nonZeroPhases = phases.filter((p) => p > 0)
   if (nonZeroPhases.length === 0) return null
@@ -111,13 +131,18 @@ function calcPlantYield(plant: PlantConfig, landLevel: number, landCount: number
   const expPerHarvest = plant.exp * (1 + expBonus)
   const expPerCycle = expPerHarvest * seasons
 
-  // 不施肥：生长 + 种植操作 + 固定开销
-  const growNoFert = baseGrow * (1 - timeReduction)
-  const cycleNoFert = growNoFert + landCount * PLANT_TIME_PER_LAND + CYCLE_OVERHEAD
+  // 动态循环时序模型
+  const detectionDelay = (timing.rttSec + timing.checkIntervalSec) / 2
+  const fixedRpcTime = timing.fixedRpcCount * timing.rttSec
+  const perLand = timing.rttSec + timing.sleepBetweenSec
 
-  // 施肥（跳过第一阶段）：生长 + 种植+施肥操作 + 固定开销
+  // 不施肥：生长 + 检测延迟 + 固定RPC + 逐块种植
+  const growNoFert = baseGrow * (1 - timeReduction)
+  const cycleNoFert = growNoFert + detectionDelay + fixedRpcTime + landCount * perLand
+
+  // 施肥（跳过第一阶段）：生长 + 检测延迟 + 固定RPC + 逐块(种植+施肥)
   const growWithFert = (baseGrow - firstPhase) * (1 - timeReduction)
-  const cycleWithFert = growWithFert + landCount * PLANT_TIME_PER_LAND * 2 + CYCLE_OVERHEAD
+  const cycleWithFert = growWithFert + detectionDelay + fixedRpcTime + landCount * perLand * 2
 
   const expPerHourNoFert = cycleNoFert > 0 ? ((expPerCycle * landCount) / cycleNoFert) * 3600 : 0
   const expPerHourWithFert = cycleWithFert > 0 ? ((expPerCycle * landCount) / cycleWithFert) * 3600 : 0
@@ -143,16 +168,18 @@ export function calculateForLandLevel(
   count: number,
   playerLevel?: number,
   top = 20,
+  timing?: OperationTiming,
 ): PlantYieldAtLevel[] {
   const plants = getAllPlants()
   const results: PlantYieldAtLevel[] = []
+  const t = timing ?? DEFAULT_TIMING
 
   for (const plant of plants) {
     const unlockLevel = getSeedUnlockLevel(plant.seed_id)
     if (playerLevel && unlockLevel > playerLevel) continue
     if (plant.land_level_need > level) continue
 
-    const yield_ = calcPlantYield(plant, level, count)
+    const yield_ = calcPlantYield(plant, level, count, t)
     if (yield_) results.push(yield_)
   }
 
@@ -162,10 +189,11 @@ export function calculateForLandLevel(
 
 export function calculateFarmRecommendation(
   landDist: LandDistribution,
-  opts?: { playerLevel?: number; top?: number },
+  opts?: { playerLevel?: number; top?: number; timing?: OperationTiming },
 ): FarmRecommendation {
   const playerLevel = opts?.playerLevel
   const top = opts?.top ?? 10
+  const timing = opts?.timing
   let totalLands = 0
   let totalExpNoFert = 0
   let totalExpWithFert = 0
@@ -175,7 +203,7 @@ export function calculateFarmRecommendation(
     if (count <= 0) continue
     totalLands += count
 
-    const ranked = calculateForLandLevel(level, count, playerLevel, top)
+    const ranked = calculateForLandLevel(level, count, playerLevel, top, timing)
     const rankedNoFert = [...ranked].sort((a, b) => compareYield(a, b, 'expPerHourNoFert'))
 
     const bestNoFert = rankedNoFert[0] ?? null
@@ -206,13 +234,14 @@ export function calculateFarmRecommendation(
 export function getPlantingRecommendation(
   level: number,
   lands = 18,
-  opts?: { top?: number; landDistribution?: LandDistribution },
+  opts?: { top?: number; landDistribution?: LandDistribution; timing?: OperationTiming },
 ) {
   const top = opts?.top ?? 20
+  const timing = opts?.timing
 
   // 如果提供了实际土地分布，使用精确计算
   if (opts?.landDistribution) {
-    const rec = calculateFarmRecommendation(opts.landDistribution, { playerLevel: level, top })
+    const rec = calculateFarmRecommendation(opts.landDistribution, { playerLevel: level, top, timing })
     // 合并所有等级的 top 列表并重新排序
     const allNoFert: PlantYieldAtLevel[] = []
     const allWithFert: PlantYieldAtLevel[] = []
@@ -243,7 +272,7 @@ export function getPlantingRecommendation(
   }
 
   // 默认：所有地视为等级 1
-  const ranked = calculateForLandLevel(1, lands, level, top)
+  const ranked = calculateForLandLevel(1, lands, level, top, timing)
   const rankedNoFert = [...ranked].sort((a, b) => compareYield(a, b, 'expPerHourNoFert'))
 
   return {

@@ -19,6 +19,7 @@ export function StatusBar({ user, platform, apiPort }: StatusBarProps) {
           {platform === 'wx' ? '微信' : 'QQ'}
         </Text>
         <Text bold>{user.name || '未登录'}</Text>
+        {user.gid > 0 && <Text dimColor>({user.gid})</Text>}
         <Text color="green">Lv{user.level}</Text>
         <Text color="yellow">金币 {user.gold.toLocaleString()}</Text>
         <Box>

@@ -1,15 +1,15 @@
 import { getPlantName } from '../config/game-data.js'
 import { OP_NAMES, PlantPhase, config } from '../config/index.js'
+import type { AccountConfig } from '../config/schema.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
 import { getDateKey } from '../utils/format.js'
-import { log, logWarn, sleep } from '../utils/logger.js'
+import { log, logWarn, setCurrentAccountLabel, sleep } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 import type { FarmManager } from './farm.js'
 
 const HELP_ONLY_WITH_EXP = true
-const _ENABLE_PUT_BAD_THINGS = false
 
 export class FriendManager {
   private isChecking = false
@@ -28,6 +28,7 @@ export class FriendManager {
     private conn: Connection,
     private store: SessionStore,
     private farm: FarmManager,
+    private getAccountConfig: () => AccountConfig,
   ) {}
 
   private checkDailyReset(): void {
@@ -154,6 +155,40 @@ export class FriendManager {
     return reply
   }
 
+  private async putWeeds(gid: number, landIds: number[]): Promise<number> {
+    let ok = 0
+    for (const landId of landIds) {
+      try {
+        const body = types.PutWeedsRequest.encode(
+          types.PutWeedsRequest.create({ host_gid: toLong(gid), land_ids: [toLong(landId)] }),
+        ).finish()
+        const { body: replyBody } = await this.conn.sendMsgAsync('gamepb.plantpb.PlantService', 'PutWeeds', body)
+        const reply = types.PutWeedsReply.decode(replyBody) as any
+        this.updateOperationLimits(reply.operation_limits)
+        ok++
+      } catch {}
+      await sleep(100)
+    }
+    return ok
+  }
+
+  private async putInsects(gid: number, landIds: number[]): Promise<number> {
+    let ok = 0
+    for (const landId of landIds) {
+      try {
+        const body = types.PutInsectsRequest.encode(
+          types.PutInsectsRequest.create({ host_gid: toLong(gid), land_ids: [toLong(landId)] }),
+        ).finish()
+        const { body: replyBody } = await this.conn.sendMsgAsync('gamepb.plantpb.PlantService', 'PutInsects', body)
+        const reply = types.PutInsectsReply.decode(replyBody) as any
+        this.updateOperationLimits(reply.operation_limits)
+        ok++
+      } catch {}
+      await sleep(100)
+    }
+    return ok
+  }
+
   private analyzeFriendLands(lands: any[], myGid: number) {
     const result = {
       stealable: [] as number[],
@@ -252,6 +287,23 @@ export class FriendManager {
         totalActions.steal = (totalActions.steal || 0) + ok
       }
     }
+    // Put bad things
+    if (this.getAccountConfig().enablePutBadThings) {
+      if (status.canPutWeed.length > 0 && this.canOperate(10003)) {
+        const weedOk = await this.putWeeds(friend.gid, status.canPutWeed)
+        if (weedOk > 0) {
+          actions.push(`放草${weedOk}`)
+          totalActions.放草 = (totalActions.放草 || 0) + weedOk
+        }
+      }
+      if (status.canPutBug.length > 0 && this.canOperate(10004)) {
+        const bugOk = await this.putInsects(friend.gid, status.canPutBug)
+        if (bugOk > 0) {
+          actions.push(`放虫${bugOk}`)
+          totalActions.放虫 = (totalActions.放虫 || 0) + bugOk
+        }
+      }
+    }
     if (actions.length > 0) {
       log('好友', `${friend.name}: ${actions.join('/')}`)
       this.store.updateFriendActions(friend.gid, actions)
@@ -262,6 +314,7 @@ export class FriendManager {
   async checkFriends(): Promise<void> {
     if (this.isChecking || !this.conn.userState.gid) return
     this.isChecking = true
+    setCurrentAccountLabel(this.conn.userState.name || `GID:${this.conn.userState.gid}`)
     this.checkDailyReset()
     try {
       const friendsReply = await this.getAllFriends()
@@ -287,20 +340,22 @@ export class FriendManager {
           visitedGids.add(gid)
         }
       }
-      // Write full friend list to store for UI (preserve existing actions)
+      // Write full friend list to store for UI (preserve existing actions, deduplicate)
       const existingActions = new Map(this.store.state.friendList.map((f) => [f.gid, f.actions]))
-      this.store.updateFriendList(
-        friends.map((f: any) => {
-          const gid = toNum(f.gid)
-          return {
-            gid,
-            name: f.remark || f.name || `GID:${gid}`,
-            level: toNum(f.level),
-            actions: existingActions.get(gid) || [],
-          }
-        }),
-        friends.length,
-      )
+      const seenGids = new Set<number>()
+      const dedupedFriends: { gid: number; name: string; level: number; actions: string[] }[] = []
+      for (const f of friends) {
+        const gid = toNum(f.gid)
+        if (seenGids.has(gid)) continue
+        seenGids.add(gid)
+        dedupedFriends.push({
+          gid,
+          name: f.remark || f.name || `GID:${gid}`,
+          level: toNum(f.level),
+          actions: existingActions.get(gid) || [],
+        })
+      }
+      this.store.updateFriendList(dedupedFriends, friends.length)
 
       if (!friendsToVisit.length) return
       this.store.updateFriendPatrol(0, friendsToVisit.length)
@@ -317,6 +372,8 @@ export class FriendManager {
       if (totalActions.草) summary.push(`除草${totalActions.草}`)
       if (totalActions.虫) summary.push(`除虫${totalActions.虫}`)
       if (totalActions.水) summary.push(`浇水${totalActions.水}`)
+      if (totalActions.放草) summary.push(`放草${totalActions.放草}`)
+      if (totalActions.放虫) summary.push(`放虫${totalActions.放虫}`)
       if (summary.length > 0) log('好友', `巡查 ${friendsToVisit.length} 人 → ${summary.join('/')}`)
       this.store.addFriendStats({
         steal: totalActions.steal || 0,
