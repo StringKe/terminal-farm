@@ -1,0 +1,1769 @@
+{
+  "nested": {
+    "gatepb": {
+      "nested": {
+        "MessageType": {
+          "values": {
+            "None": 0,
+            "Request": 1,
+            "Response": 2,
+            "Notify": 3
+          }
+        },
+        "Meta": {
+          "fields": {
+            "service_name": {
+              "type": "string",
+              "id": 1
+            },
+            "method_name": {
+              "type": "string",
+              "id": 2
+            },
+            "message_type": {
+              "type": "int32",
+              "id": 3
+            },
+            "client_seq": {
+              "type": "int64",
+              "id": 4
+            },
+            "server_seq": {
+              "type": "int64",
+              "id": 5
+            },
+            "error_code": {
+              "type": "int64",
+              "id": 6
+            },
+            "error_message": {
+              "type": "string",
+              "id": 7
+            },
+            "metadata": {
+              "keyType": "string",
+              "type": "bytes",
+              "id": 8
+            }
+          }
+        },
+        "Message": {
+          "fields": {
+            "meta": {
+              "type": "Meta",
+              "id": 1
+            },
+            "body": {
+              "type": "bytes",
+              "id": 2
+            }
+          }
+        },
+        "EventMessage": {
+          "fields": {
+            "message_type": {
+              "type": "string",
+              "id": 1
+            },
+            "body": {
+              "type": "bytes",
+              "id": 2
+            }
+          }
+        },
+        "KickoutNotify": {
+          "fields": {
+            "reason": {
+              "type": "int64",
+              "id": 1
+            },
+            "reason_message": {
+              "type": "string",
+              "id": 2
+            }
+          }
+        }
+      }
+    },
+    "gamepb": {
+      "nested": {
+        "userpb": {
+          "nested": {
+            "LoginRequest": {
+              "fields": {
+                "sharer_id": {
+                  "type": "int64",
+                  "id": 3
+                },
+                "sharer_open_id": {
+                  "type": "string",
+                  "id": 4
+                },
+                "device_info": {
+                  "type": "DeviceInfo",
+                  "id": 5
+                },
+                "share_cfg_id": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "scene_id": {
+                  "type": "string",
+                  "id": 7
+                },
+                "report_data": {
+                  "type": "ReportData",
+                  "id": 8
+                }
+              }
+            },
+            "DeviceInfo": {
+              "fields": {
+                "client_version": {
+                  "type": "string",
+                  "id": 1
+                },
+                "sys_software": {
+                  "type": "string",
+                  "id": 2
+                },
+                "sys_hardware": {
+                  "type": "string",
+                  "id": 3
+                },
+                "telecom_oper": {
+                  "type": "string",
+                  "id": 4
+                },
+                "network": {
+                  "type": "string",
+                  "id": 5
+                },
+                "screen_width": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "screen_height": {
+                  "type": "int64",
+                  "id": 7
+                },
+                "density": {
+                  "type": "float",
+                  "id": 8
+                },
+                "cpu": {
+                  "type": "string",
+                  "id": 9
+                },
+                "memory": {
+                  "type": "int64",
+                  "id": 10
+                },
+                "gl_render": {
+                  "type": "string",
+                  "id": 11
+                },
+                "gl_version": {
+                  "type": "string",
+                  "id": 12
+                },
+                "device_id": {
+                  "type": "string",
+                  "id": 13
+                },
+                "android_oaid": {
+                  "type": "string",
+                  "id": 14
+                },
+                "ios_caid": {
+                  "type": "string",
+                  "id": 15
+                }
+              }
+            },
+            "ReportData": {
+              "fields": {
+                "callback": {
+                  "type": "string",
+                  "id": 1
+                },
+                "cd_extend_info": {
+                  "type": "string",
+                  "id": 2
+                },
+                "click_id": {
+                  "type": "string",
+                  "id": 3
+                },
+                "clue_token": {
+                  "type": "string",
+                  "id": 4
+                },
+                "minigame_channel": {
+                  "type": "string",
+                  "id": 5
+                },
+                "minigame_platid": {
+                  "type": "int32",
+                  "id": 6
+                },
+                "req_id": {
+                  "type": "string",
+                  "id": 7
+                },
+                "trackid": {
+                  "type": "string",
+                  "id": 8
+                }
+              }
+            },
+            "LoginReply": {
+              "fields": {
+                "basic": {
+                  "type": "BasicInfo",
+                  "id": 1
+                },
+                "time_now_millis": {
+                  "type": "int64",
+                  "id": 3
+                },
+                "is_first_login": {
+                  "type": "bool",
+                  "id": 4
+                },
+                "qq_group_infos": {
+                  "rule": "repeated",
+                  "type": "QQGroupInfo",
+                  "id": 6
+                },
+                "version_info": {
+                  "type": "VersionInfo",
+                  "id": 9
+                },
+                "qq_friend_recommend_authorized": {
+                  "type": "int64",
+                  "id": 11
+                }
+              }
+            },
+            "BasicInfo": {
+              "fields": {
+                "gid": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "name": {
+                  "type": "string",
+                  "id": 2
+                },
+                "level": {
+                  "type": "int64",
+                  "id": 3
+                },
+                "exp": {
+                  "type": "int64",
+                  "id": 4
+                },
+                "gold": {
+                  "type": "int64",
+                  "id": 5
+                },
+                "open_id": {
+                  "type": "string",
+                  "id": 6
+                },
+                "avatar_url": {
+                  "type": "string",
+                  "id": 7
+                },
+                "remark": {
+                  "type": "string",
+                  "id": 8
+                },
+                "signature": {
+                  "type": "string",
+                  "id": 9
+                },
+                "gender": {
+                  "type": "int32",
+                  "id": 10
+                },
+                "authorized_status": {
+                  "type": "int32",
+                  "id": 13
+                },
+                "disable_nudge": {
+                  "type": "bool",
+                  "id": 14
+                }
+              }
+            },
+            "QQGroupInfo": {
+              "fields": {
+                "qq_group_id": {
+                  "type": "string",
+                  "id": 1
+                },
+                "qq_group_name": {
+                  "type": "string",
+                  "id": 2
+                }
+              }
+            },
+            "VersionInfo": {
+              "fields": {
+                "status": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "version_recommend": {
+                  "type": "string",
+                  "id": 2
+                },
+                "version_force": {
+                  "type": "string",
+                  "id": 3
+                },
+                "res_version": {
+                  "type": "string",
+                  "id": 4
+                }
+              }
+            },
+            "HeartbeatRequest": {
+              "fields": {
+                "gid": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "client_version": {
+                  "type": "string",
+                  "id": 2
+                }
+              }
+            },
+            "HeartbeatReply": {
+              "fields": {
+                "server_time": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "version_info": {
+                  "type": "VersionInfo",
+                  "id": 2
+                }
+              }
+            },
+            "ReportArkClickRequest": {
+              "fields": {
+                "sharer_id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "sharer_open_id": {
+                  "type": "string",
+                  "id": 2
+                },
+                "scene_id": {
+                  "type": "string",
+                  "id": 3
+                },
+                "share_cfg_id": {
+                  "type": "int64",
+                  "id": 4
+                }
+              }
+            },
+            "ReportArkClickReply": {
+              "fields": {}
+            },
+            "BasicNotify": {
+              "fields": {
+                "basic": {
+                  "type": "BasicInfo",
+                  "id": 1
+                }
+              }
+            }
+          }
+        },
+        "plantpb": {
+          "nested": {
+            "PlantPhase": {
+              "values": {
+                "PHASE_UNKNOWN": 0,
+                "SEED": 1,
+                "GERMINATION": 2,
+                "SMALL_LEAVES": 3,
+                "LARGE_LEAVES": 4,
+                "BLOOMING": 5,
+                "MATURE": 6,
+                "DEAD": 7
+              }
+            },
+            "LandInfo": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "unlocked": {
+                  "type": "bool",
+                  "id": 2
+                },
+                "level": {
+                  "type": "int64",
+                  "id": 3
+                },
+                "max_level": {
+                  "type": "int64",
+                  "id": 4
+                },
+                "could_unlock": {
+                  "type": "bool",
+                  "id": 5
+                },
+                "could_upgrade": {
+                  "type": "bool",
+                  "id": 6
+                },
+                "unlock_condition": {
+                  "type": "LandUnlockCondition",
+                  "id": 7
+                },
+                "upgrade_condition": {
+                  "type": "LandUpgradeCondition",
+                  "id": 8
+                },
+                "buff": {
+                  "type": "Buff",
+                  "id": 9
+                },
+                "plant": {
+                  "type": "PlantInfo",
+                  "id": 10
+                },
+                "is_shared": {
+                  "type": "bool",
+                  "id": 11
+                },
+                "can_share": {
+                  "type": "bool",
+                  "id": 12
+                },
+                "master_land_id": {
+                  "type": "int64",
+                  "id": 13
+                },
+                "slave_land_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 14
+                },
+                "land_size": {
+                  "type": "int64",
+                  "id": 15
+                },
+                "lands_level": {
+                  "type": "int64",
+                  "id": 16
+                }
+              },
+              "nested": {
+                "Buff": {
+                  "fields": {
+                    "plant_yield_bonus": {
+                      "type": "int64",
+                      "id": 1
+                    },
+                    "planting_time_reduction": {
+                      "type": "int64",
+                      "id": 2
+                    },
+                    "plant_exp_bonus": {
+                      "type": "int64",
+                      "id": 3
+                    }
+                  }
+                }
+              }
+            },
+            "LandUnlockCondition": {
+              "fields": {
+                "need_level": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "need_gold": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "LandUpgradeCondition": {
+              "fields": {
+                "need_level": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "need_gold": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "PlantInfo": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "name": {
+                  "type": "string",
+                  "id": 2
+                },
+                "phases": {
+                  "rule": "repeated",
+                  "type": "PlantPhaseInfo",
+                  "id": 4
+                },
+                "season": {
+                  "type": "int64",
+                  "id": 5
+                },
+                "dry_num": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "stole_num": {
+                  "type": "int64",
+                  "id": 9
+                },
+                "fruit_id": {
+                  "type": "int64",
+                  "id": 10
+                },
+                "fruit_num": {
+                  "type": "int64",
+                  "id": 11
+                },
+                "weed_owners": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 12
+                },
+                "insect_owners": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 13
+                },
+                "stealers": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 14
+                },
+                "grow_sec": {
+                  "type": "int64",
+                  "id": 15
+                },
+                "stealable": {
+                  "type": "bool",
+                  "id": 16
+                },
+                "left_inorc_fert_times": {
+                  "type": "int64",
+                  "id": 17
+                },
+                "left_fruit_num": {
+                  "type": "int64",
+                  "id": 18
+                },
+                "steal_intimacy_level": {
+                  "type": "int64",
+                  "id": 19
+                },
+                "mutant_config_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 20
+                },
+                "is_nudged": {
+                  "type": "bool",
+                  "id": 21
+                }
+              }
+            },
+            "PlantPhaseInfo": {
+              "fields": {
+                "phase": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "begin_time": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "phase_id": {
+                  "type": "int64",
+                  "id": 3
+                },
+                "dry_time": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "weeds_time": {
+                  "type": "int64",
+                  "id": 7
+                },
+                "insect_time": {
+                  "type": "int64",
+                  "id": 8
+                },
+                "ferts_used": {
+                  "keyType": "int64",
+                  "type": "int64",
+                  "id": 9
+                },
+                "mutants": {
+                  "rule": "repeated",
+                  "type": "MutantInfo",
+                  "id": 10
+                }
+              }
+            },
+            "MutantInfo": {
+              "fields": {
+                "mutant_time": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "mutant_config_id": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "weather_id": {
+                  "type": "int64",
+                  "id": 3
+                }
+              }
+            },
+            "OperationLimit": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "day_times": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "day_times_lt": {
+                  "type": "int64",
+                  "id": 3
+                },
+                "day_share_id": {
+                  "type": "int64",
+                  "id": 4
+                },
+                "day_exp_times": {
+                  "type": "int64",
+                  "id": 5
+                },
+                "day_ex_times_lt": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "day_exp_share_id": {
+                  "type": "int64",
+                  "id": 7
+                }
+              }
+            },
+            "AllLandsRequest": {
+              "fields": {
+                "host_gid": {
+                  "type": "int64",
+                  "id": 1
+                }
+              }
+            },
+            "AllLandsReply": {
+              "fields": {
+                "lands": {
+                  "rule": "repeated",
+                  "type": "LandInfo",
+                  "id": 1
+                },
+                "operation_limits": {
+                  "rule": "repeated",
+                  "type": "OperationLimit",
+                  "id": 2
+                }
+              }
+            },
+            "HarvestRequest": {
+              "fields": {
+                "land_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                },
+                "host_gid": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "is_all": {
+                  "type": "bool",
+                  "id": 3
+                }
+              }
+            },
+            "HarvestReply": {
+              "fields": {
+                "land": {
+                  "rule": "repeated",
+                  "type": "LandInfo",
+                  "id": 1
+                },
+                "operation_limits": {
+                  "rule": "repeated",
+                  "type": "OperationLimit",
+                  "id": 4
+                }
+              }
+            },
+            "WaterLandRequest": {
+              "fields": {
+                "land_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                },
+                "host_gid": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "WaterLandReply": {
+              "fields": {
+                "land": {
+                  "rule": "repeated",
+                  "type": "LandInfo",
+                  "id": 1
+                },
+                "operation_limits": {
+                  "rule": "repeated",
+                  "type": "OperationLimit",
+                  "id": 2
+                }
+              }
+            },
+            "WeedOutRequest": {
+              "fields": {
+                "land_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                },
+                "host_gid": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "WeedOutReply": {
+              "fields": {
+                "land": {
+                  "rule": "repeated",
+                  "type": "LandInfo",
+                  "id": 1
+                },
+                "operation_limits": {
+                  "rule": "repeated",
+                  "type": "OperationLimit",
+                  "id": 2
+                }
+              }
+            },
+            "InsecticideRequest": {
+              "fields": {
+                "land_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                },
+                "host_gid": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "InsecticideReply": {
+              "fields": {
+                "land": {
+                  "rule": "repeated",
+                  "type": "LandInfo",
+                  "id": 1
+                },
+                "operation_limits": {
+                  "rule": "repeated",
+                  "type": "OperationLimit",
+                  "id": 2
+                }
+              }
+            },
+            "PlantItem": {
+              "fields": {
+                "seed_id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "land_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 2
+                },
+                "auto_slave": {
+                  "type": "bool",
+                  "id": 3
+                }
+              }
+            },
+            "PlantRequest": {
+              "fields": {
+                "land_and_seed": {
+                  "keyType": "int64",
+                  "type": "int64",
+                  "id": 1
+                },
+                "items": {
+                  "rule": "repeated",
+                  "type": "PlantItem",
+                  "id": 2
+                }
+              }
+            },
+            "PlantReply": {
+              "fields": {
+                "land": {
+                  "rule": "repeated",
+                  "type": "LandInfo",
+                  "id": 1
+                },
+                "operation_limits": {
+                  "rule": "repeated",
+                  "type": "OperationLimit",
+                  "id": 2
+                }
+              }
+            },
+            "RemovePlantRequest": {
+              "fields": {
+                "land_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                }
+              }
+            },
+            "RemovePlantReply": {
+              "fields": {
+                "land": {
+                  "rule": "repeated",
+                  "type": "LandInfo",
+                  "id": 1
+                },
+                "operation_limits": {
+                  "rule": "repeated",
+                  "type": "OperationLimit",
+                  "id": 2
+                }
+              }
+            },
+            "FertilizeRequest": {
+              "fields": {
+                "land_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                },
+                "fertilizer_id": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "FertilizeReply": {
+              "fields": {
+                "land": {
+                  "rule": "repeated",
+                  "type": "LandInfo",
+                  "id": 1
+                },
+                "operation_limits": {
+                  "rule": "repeated",
+                  "type": "OperationLimit",
+                  "id": 2
+                },
+                "fertilizer": {
+                  "type": "int64",
+                  "id": 3
+                }
+              }
+            },
+            "PutInsectsRequest": {
+              "fields": {
+                "land_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                },
+                "host_gid": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "PutInsectsReply": {
+              "fields": {
+                "land": {
+                  "rule": "repeated",
+                  "type": "LandInfo",
+                  "id": 1
+                },
+                "operation_limits": {
+                  "rule": "repeated",
+                  "type": "OperationLimit",
+                  "id": 2
+                }
+              }
+            },
+            "PutWeedsRequest": {
+              "fields": {
+                "land_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                },
+                "host_gid": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "PutWeedsReply": {
+              "fields": {
+                "land": {
+                  "rule": "repeated",
+                  "type": "LandInfo",
+                  "id": 1
+                },
+                "operation_limits": {
+                  "rule": "repeated",
+                  "type": "OperationLimit",
+                  "id": 2
+                }
+              }
+            },
+            "LandsNotify": {
+              "fields": {
+                "lands": {
+                  "rule": "repeated",
+                  "type": "LandInfo",
+                  "id": 1
+                },
+                "host_gid": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            }
+          }
+        },
+        "shoppb": {
+          "nested": {
+            "ShopProfile": {
+              "fields": {
+                "shop_id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "shop_name": {
+                  "type": "string",
+                  "id": 2
+                },
+                "shop_type": {
+                  "type": "int32",
+                  "id": 3
+                }
+              }
+            },
+            "GoodsInfo": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "bought_num": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "price": {
+                  "type": "int64",
+                  "id": 3
+                },
+                "limit_count": {
+                  "type": "int64",
+                  "id": 4
+                },
+                "unlocked": {
+                  "type": "bool",
+                  "id": 5
+                },
+                "item_id": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "item_count": {
+                  "type": "int64",
+                  "id": 7
+                },
+                "conds": {
+                  "rule": "repeated",
+                  "type": "Cond",
+                  "id": 8
+                }
+              }
+            },
+            "CondType": {
+              "values": {
+                "COND_TYPE_UNKNOWN": 0,
+                "MIN_LEVEL": 1,
+                "UNLOCK_CARD": 2
+              }
+            },
+            "Cond": {
+              "fields": {
+                "type": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "param": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "ShopProfilesRequest": {
+              "fields": {}
+            },
+            "ShopProfilesReply": {
+              "fields": {
+                "shop_profiles": {
+                  "rule": "repeated",
+                  "type": "ShopProfile",
+                  "id": 1
+                }
+              }
+            },
+            "ShopInfoRequest": {
+              "fields": {
+                "shop_id": {
+                  "type": "int64",
+                  "id": 1
+                }
+              }
+            },
+            "ShopInfoReply": {
+              "fields": {
+                "goods_list": {
+                  "rule": "repeated",
+                  "type": "GoodsInfo",
+                  "id": 1
+                }
+              }
+            },
+            "BuyGoodsRequest": {
+              "fields": {
+                "goods_id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "num": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "price": {
+                  "type": "int64",
+                  "id": 3
+                }
+              }
+            },
+            "BuyGoodsReply": {
+              "fields": {
+                "goods": {
+                  "type": "GoodsInfo",
+                  "id": 1
+                },
+                "get_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 2
+                },
+                "cost_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 3
+                }
+              }
+            },
+            "GoodsUnlockNotify": {
+              "fields": {
+                "goods_list": {
+                  "rule": "repeated",
+                  "type": "GoodsInfo",
+                  "id": 1
+                }
+              }
+            }
+          }
+        },
+        "friendpb": {
+          "nested": {
+            "Plant": {
+              "fields": {
+                "dry_time_sec": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "weed_time_sec": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "insect_time_sec": {
+                  "type": "int64",
+                  "id": 3
+                },
+                "ripe_time_sec": {
+                  "type": "int64",
+                  "id": 4
+                },
+                "ripe_fruit_id": {
+                  "type": "int64",
+                  "id": 5
+                },
+                "steal_plant_num": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "dry_num": {
+                  "type": "int64",
+                  "id": 7
+                },
+                "weed_num": {
+                  "type": "int64",
+                  "id": 8
+                },
+                "insect_num": {
+                  "type": "int64",
+                  "id": 9
+                }
+              }
+            },
+            "Tags": {
+              "fields": {
+                "is_new": {
+                  "type": "bool",
+                  "id": 1
+                },
+                "is_follow": {
+                  "type": "bool",
+                  "id": 2
+                }
+              }
+            },
+            "GameFriend": {
+              "fields": {
+                "gid": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "open_id": {
+                  "type": "string",
+                  "id": 2
+                },
+                "name": {
+                  "type": "string",
+                  "id": 3
+                },
+                "avatar_url": {
+                  "type": "string",
+                  "id": 4
+                },
+                "remark": {
+                  "type": "string",
+                  "id": 5
+                },
+                "level": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "gold": {
+                  "type": "int64",
+                  "id": 7
+                },
+                "tags": {
+                  "type": "Tags",
+                  "id": 8
+                },
+                "plant": {
+                  "type": "Plant",
+                  "id": 9
+                },
+                "authorized_status": {
+                  "type": "int32",
+                  "id": 10
+                }
+              }
+            },
+            "GetAllRequest": {
+              "fields": {}
+            },
+            "GetAllReply": {
+              "fields": {
+                "game_friends": {
+                  "rule": "repeated",
+                  "type": "GameFriend",
+                  "id": 1
+                },
+                "application_count": {
+                  "type": "int64",
+                  "id": 3
+                }
+              }
+            },
+            "SyncAllRequest": {
+              "fields": {
+                "open_ids": {
+                  "rule": "repeated",
+                  "type": "string",
+                  "id": 2
+                }
+              }
+            },
+            "SyncAllReply": {
+              "fields": {
+                "game_friends": {
+                  "rule": "repeated",
+                  "type": "GameFriend",
+                  "id": 1
+                },
+                "application_count": {
+                  "type": "int64",
+                  "id": 3
+                }
+              }
+            },
+            "Application": {
+              "fields": {
+                "gid": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "time_at": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "open_id": {
+                  "type": "string",
+                  "id": 3
+                },
+                "name": {
+                  "type": "string",
+                  "id": 4
+                },
+                "avatar_url": {
+                  "type": "string",
+                  "id": 5
+                },
+                "level": {
+                  "type": "int64",
+                  "id": 6
+                }
+              }
+            },
+            "GetApplicationsRequest": {
+              "fields": {}
+            },
+            "GetApplicationsReply": {
+              "fields": {
+                "applications": {
+                  "rule": "repeated",
+                  "type": "Application",
+                  "id": 1
+                },
+                "block_applications": {
+                  "type": "bool",
+                  "id": 2
+                }
+              }
+            },
+            "AcceptFriendsRequest": {
+              "fields": {
+                "friend_gids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                }
+              }
+            },
+            "AcceptFriendsReply": {
+              "fields": {
+                "friends": {
+                  "rule": "repeated",
+                  "type": "GameFriend",
+                  "id": 1
+                }
+              }
+            },
+            "RejectFriendsRequest": {
+              "fields": {
+                "friend_gids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                }
+              }
+            },
+            "RejectFriendsReply": {
+              "fields": {}
+            },
+            "SetBlockApplicationsRequest": {
+              "fields": {
+                "block": {
+                  "type": "bool",
+                  "id": 1
+                }
+              }
+            },
+            "SetBlockApplicationsReply": {
+              "fields": {
+                "block": {
+                  "type": "bool",
+                  "id": 1
+                }
+              }
+            },
+            "FriendApplicationReceivedNotify": {
+              "fields": {
+                "applications": {
+                  "rule": "repeated",
+                  "type": "Application",
+                  "id": 1
+                }
+              }
+            },
+            "FriendAddedNotify": {
+              "fields": {
+                "friends": {
+                  "rule": "repeated",
+                  "type": "GameFriend",
+                  "id": 1
+                }
+              }
+            }
+          }
+        },
+        "visitpb": {
+          "nested": {
+            "EnterReason": {
+              "values": {
+                "ENTER_REASON_UNKNOWN": 0,
+                "ENTER_REASON_BUBBLE": 1,
+                "ENTER_REASON_FRIEND": 2,
+                "ENTER_REASON_INTERACT": 3
+              }
+            },
+            "EnterRequest": {
+              "fields": {
+                "host_gid": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "reason": {
+                  "type": "int32",
+                  "id": 2
+                }
+              }
+            },
+            "EnterReply": {
+              "fields": {
+                "basic": {
+                  "type": "gamepb.userpb.BasicInfo",
+                  "id": 1
+                },
+                "lands": {
+                  "rule": "repeated",
+                  "type": "gamepb.plantpb.LandInfo",
+                  "id": 2
+                }
+              }
+            },
+            "LeaveRequest": {
+              "fields": {
+                "host_gid": {
+                  "type": "int64",
+                  "id": 1
+                }
+              }
+            },
+            "LeaveReply": {
+              "fields": {}
+            }
+          }
+        },
+        "itempb": {
+          "nested": {
+            "ItemNotify": {
+              "fields": {
+                "items": {
+                  "rule": "repeated",
+                  "type": "corepb.ItemChg",
+                  "id": 1
+                }
+              }
+            },
+            "BagRequest": {
+              "fields": {}
+            },
+            "BagReply": {
+              "fields": {
+                "item_bag": {
+                  "type": "corepb.ItemBag",
+                  "id": 1
+                }
+              }
+            },
+            "SellRequest": {
+              "fields": {
+                "items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                }
+              }
+            },
+            "SellReply": {
+              "fields": {
+                "sell_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                },
+                "get_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 2
+                }
+              }
+            },
+            "UseRequest": {
+              "fields": {
+                "item_id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "count": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "land_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 3
+                }
+              }
+            },
+            "UseReply": {
+              "fields": {
+                "items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                }
+              }
+            },
+            "UseItem": {
+              "fields": {
+                "item_id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "count": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "BatchUseRequest": {
+              "fields": {
+                "items": {
+                  "rule": "repeated",
+                  "type": "UseItem",
+                  "id": 1
+                }
+              }
+            },
+            "BatchUseReply": {
+              "fields": {
+                "items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                }
+              }
+            }
+          }
+        },
+        "taskpb": {
+          "nested": {
+            "Task": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "progress": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "is_claimed": {
+                  "type": "bool",
+                  "id": 3
+                },
+                "is_unlocked": {
+                  "type": "bool",
+                  "id": 4
+                },
+                "rewards": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 5
+                },
+                "total_progress": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "share_multiple": {
+                  "type": "int64",
+                  "id": 7
+                },
+                "params": {
+                  "rule": "repeated",
+                  "type": "string",
+                  "id": 8
+                },
+                "desc": {
+                  "type": "string",
+                  "id": 9
+                },
+                "task_type": {
+                  "type": "int32",
+                  "id": 10
+                },
+                "group": {
+                  "type": "int64",
+                  "id": 11
+                },
+                "cond_type": {
+                  "type": "int64",
+                  "id": 12
+                },
+                "is_show_text": {
+                  "type": "int64",
+                  "id": 13
+                }
+              }
+            },
+            "Active": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "status": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 3
+                }
+              }
+            },
+            "TaskInfo": {
+              "fields": {
+                "growth_tasks": {
+                  "rule": "repeated",
+                  "type": "Task",
+                  "id": 1
+                },
+                "daily_tasks": {
+                  "rule": "repeated",
+                  "type": "Task",
+                  "id": 2
+                },
+                "tasks": {
+                  "rule": "repeated",
+                  "type": "Task",
+                  "id": 3
+                },
+                "actives": {
+                  "rule": "repeated",
+                  "type": "Active",
+                  "id": 4
+                }
+              }
+            },
+            "TaskInfoRequest": {
+              "fields": {}
+            },
+            "TaskInfoReply": {
+              "fields": {
+                "task_info": {
+                  "type": "TaskInfo",
+                  "id": 1
+                }
+              }
+            },
+            "ClaimTaskRewardRequest": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "do_shared": {
+                  "type": "bool",
+                  "id": 2
+                }
+              }
+            },
+            "ClaimTaskRewardReply": {
+              "fields": {
+                "items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                },
+                "task_info": {
+                  "type": "TaskInfo",
+                  "id": 2
+                },
+                "compensated_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 3
+                }
+              }
+            },
+            "BatchClaimTaskRewardRequest": {
+              "fields": {
+                "ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                },
+                "do_shared": {
+                  "type": "bool",
+                  "id": 2
+                }
+              }
+            },
+            "BatchClaimTaskRewardReply": {
+              "fields": {
+                "items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                },
+                "task_info": {
+                  "type": "TaskInfo",
+                  "id": 2
+                },
+                "compensated_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 3
+                }
+              }
+            },
+            "TaskInfoNotify": {
+              "fields": {
+                "task_info": {
+                  "type": "TaskInfo",
+                  "id": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "corepb": {
+      "nested": {
+        "Item": {
+          "fields": {
+            "id": {
+              "type": "int64",
+              "id": 1
+            },
+            "count": {
+              "type": "int64",
+              "id": 2
+            },
+            "expire_time": {
+              "type": "int64",
+              "id": 3
+            },
+            "uid": {
+              "type": "int64",
+              "id": 6
+            },
+            "is_new": {
+              "type": "bool",
+              "id": 7
+            },
+            "mutant_types": {
+              "rule": "repeated",
+              "type": "int64",
+              "id": 8
+            }
+          }
+        },
+        "ItemBag": {
+          "fields": {
+            "items": {
+              "rule": "repeated",
+              "type": "Item",
+              "id": 1
+            }
+          }
+        },
+        "ItemChg": {
+          "fields": {
+            "item": {
+              "type": "Item",
+              "id": 1
+            },
+            "delta": {
+              "type": "int64",
+              "id": 2
+            }
+          }
+        }
+      }
+    }
+  }
+}

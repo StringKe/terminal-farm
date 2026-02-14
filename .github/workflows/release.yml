@@ -1,0 +1,47 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build proto bundle
+        run: bun run build:proto
+
+      - name: Build all binaries
+        run: bun run build
+
+      - name: Generate version tag
+        id: version
+        run: |
+          TAG="build-$(date -u +%Y%m%d)-$(git rev-parse --short HEAD)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "$TAG" > dist/VERSION.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist/terminal-farm-linux-x64
+            dist/terminal-farm-linux-arm64
+            dist/terminal-farm-darwin-x64
+            dist/terminal-farm-darwin-arm64
+            dist/terminal-farm-windows-x64.exe
+            dist/VERSION.txt

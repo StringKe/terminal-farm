@@ -1,29 +1,12 @@
-import { join } from 'node:path'
 import { Root, type Type } from 'protobufjs'
-
-const PROTO_DIR = join(import.meta.dir, '..', '..', 'proto')
+import protoBundle from './proto-bundle.json'
 
 let root: Root | null = null
 
 export const types: Record<string, Type> = {}
 
 export async function loadProto(): Promise<void> {
-  root = new Root()
-  await root.load(
-    [
-      'game.proto',
-      'userpb.proto',
-      'plantpb.proto',
-      'corepb.proto',
-      'shoppb.proto',
-      'friendpb.proto',
-      'visitpb.proto',
-      'notifypb.proto',
-      'taskpb.proto',
-      'itempb.proto',
-    ].map((f) => join(PROTO_DIR, f)),
-    { keepCase: true },
-  )
+  root = Root.fromJSON(protoBundle as ReturnType<Root['toJSON']>)
 
   // Gate
   types.GateMessage = root.lookupType('gatepb.Message')

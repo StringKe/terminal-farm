@@ -1,5 +1,6 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import roleLevelData from '../../game-config/RoleLevel.json'
+import plantData from '../../game-config/Plant.json'
+import itemInfoData from '../../game-config/ItemInfo.json'
 
 interface PlantConfig {
   id: number
@@ -23,8 +24,6 @@ interface RoleLevelConfig {
   exp: number
 }
 
-const GAME_CONFIG_DIR = join(import.meta.dir, '..', '..', 'game-config')
-
 const plantMap = new Map<number, PlantConfig>()
 const seedToPlant = new Map<number, PlantConfig>()
 const fruitToPlant = new Map<number, PlantConfig>()
@@ -34,7 +33,7 @@ let levelExpTable: number[] = []
 export function loadConfigs(): void {
   // Role level
   try {
-    const data: RoleLevelConfig[] = JSON.parse(readFileSync(join(GAME_CONFIG_DIR, 'RoleLevel.json'), 'utf8'))
+    const data = roleLevelData as RoleLevelConfig[]
     levelExpTable = []
     for (const item of data) {
       levelExpTable[item.level] = item.exp
@@ -43,7 +42,7 @@ export function loadConfigs(): void {
 
   // Plants
   try {
-    const data: PlantConfig[] = JSON.parse(readFileSync(join(GAME_CONFIG_DIR, 'Plant.json'), 'utf8'))
+    const data = plantData as PlantConfig[]
     plantMap.clear()
     seedToPlant.clear()
     fruitToPlant.clear()
@@ -56,7 +55,7 @@ export function loadConfigs(): void {
 
   // Items
   try {
-    const data: ItemInfoConfig[] = JSON.parse(readFileSync(join(GAME_CONFIG_DIR, 'ItemInfo.json'), 'utf8'))
+    const data = itemInfoData as ItemInfoConfig[]
     itemInfoMap.clear()
     for (const item of data) {
       const id = Number(item.id) || 0

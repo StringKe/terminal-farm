@@ -1,29 +1,24 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import defaultVersionData from '../../.version.json'
 import type { AppConfig } from './schema.js'
 
-const VERSION_FILE = join(import.meta.dir, '..', '..', '.version.json')
-
-function loadVersionConfig(): { serverUrl: string; clientVersion: string } {
-  try {
-    const data = JSON.parse(readFileSync(VERSION_FILE, 'utf8'))
-    return {
-      serverUrl: data.game?.serverUrl ?? 'wss://gate-obt.nqf.qq.com/prod/ws',
-      clientVersion: data.app?.clientVersion ?? '1.6.0.14_20251224',
-    }
-  } catch {
-    return {
-      serverUrl: 'wss://gate-obt.nqf.qq.com/prod/ws',
-      clientVersion: '1.6.0.14_20251224',
-    }
+export const versionData = (() => {
+  const cwdVersionFile = join(process.cwd(), '.version.json')
+  if (existsSync(cwdVersionFile)) {
+    try {
+      return JSON.parse(readFileSync(cwdVersionFile, 'utf8'))
+    } catch {}
   }
-}
+  return defaultVersionData
+})()
 
-const versionConfig = loadVersionConfig()
+const serverUrl = versionData.game?.serverUrl ?? 'wss://gate-obt.nqf.qq.com/prod/ws'
+const clientVersion = versionData.app?.clientVersion ?? '1.6.0.14_20251224'
 
 export const config: AppConfig = {
-  serverUrl: versionConfig.serverUrl,
-  clientVersion: versionConfig.clientVersion,
+  serverUrl,
+  clientVersion,
   platform: 'qq',
   os: 'iOS',
   heartbeatInterval: 25000,
@@ -33,7 +28,7 @@ export const config: AppConfig = {
   autoReplantMode: 'levelup',
   replantProtectPercent: 80,
   deviceInfo: {
-    client_version: versionConfig.clientVersion,
+    client_version: clientVersion,
     sys_software: 'iOS 26.2.1',
     network: 'wifi',
     memory: '7672',

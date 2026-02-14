@@ -7,6 +7,8 @@
   "scripts": {
     "start": "bun run src/main.ts",
     "dev": "bun run --watch src/main.ts",
+    "build:proto": "bun run scripts/build-proto.ts",
+    "build": "bun run scripts/build.ts",
     "check": "bunx biome check .",
     "format": "bunx biome format --write .",
     "lint": "bunx biome lint ."
@@ -24,8 +26,9 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/bun": "^1.2.4",
+    "@types/qrcode-terminal": "^0.12.2",
     "@types/react": "^18.3.18",
     "@types/ws": "^8.5.14",
-    "@types/qrcode-terminal": "^0.12.2"
+    "protobufjs-cli": "^2.0.0"
   }
 }
