@@ -27,6 +27,7 @@ export class Connection extends EventEmitter {
   connect(code: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const url = `${this.config.serverUrl}?platform=${this.config.platform}&os=${this.config.os}&ver=${this.config.clientVersion}&code=${code}&openID=`
+      let settled = false
 
       this.ws = new WebSocket(url, {
         headers: {
@@ -40,8 +41,14 @@ export class Connection extends EventEmitter {
 
       this.ws.on('open', () => {
         this.sendLogin()
-          .then(() => resolve())
-          .catch(reject)
+          .then(() => {
+            settled = true
+            resolve()
+          })
+          .catch((err) => {
+            settled = true
+            reject(err)
+          })
       })
 
       this.ws.on('message', (data: Buffer | ArrayBuffer) => {
@@ -52,11 +59,19 @@ export class Connection extends EventEmitter {
       this.ws.on('close', (code, _reason) => {
         log('WS', `连接关闭 (code=${code})`)
         this.cleanup()
+        if (!settled) {
+          settled = true
+          reject(new Error(`连接关闭 (code=${code})`))
+        }
         this.emit('close', code)
       })
 
       this.ws.on('error', (err) => {
         logWarn('WS', `错误: ${err.message}`)
+        if (!settled) {
+          settled = true
+          reject(err)
+        }
         this.emit('error', err)
       })
     })

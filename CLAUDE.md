@@ -97,9 +97,39 @@ src/main.ts (入口，CLI 参数解析)
 
 通过 `.parent-commit` 文件记录旧仓库最后同步的 commit hash，使用 `/sync-upstream` Skill 实现逻辑级别的上游同步。
 
+## Git 提交规范
+
+使用 Conventional Commits，**描述必须使用中文**。
+
+格式：`<类型>[可选范围]: <中文描述>`
+
+```
+feat: 新增好友自动接受功能
+fix: 修复心跳超时未重连的问题
+refactor(protocol): 重构消息编解码逻辑
+perf(farm): 优化巡田轮询间隔策略
+docs: 更新 README 快速开始指南
+chore: 升级 protobufjs 到 v8
+```
+
+| 类型       | 说明         |
+| ---------- | ------------ |
+| `feat`     | 新功能       |
+| `fix`      | 修复 bug     |
+| `docs`     | 文档         |
+| `refactor` | 重构         |
+| `perf`     | 性能优化     |
+| `test`     | 测试         |
+| `build`    | 构建/依赖    |
+| `ci`       | CI 配置      |
+| `chore`    | 其他         |
+
+- 破坏性变更：`feat!:` 或脚注 `BREAKING CHANGE:`
+- **禁止**：`Co-Authored-By` 或 AI 署名
+- body 部分也使用中文，可多行说明变更原因和影响
+
 ## 注意事项
 
 - QQ 支持扫码 + code 复用；微信仅一次性 code
 - 服务器有每日操作次数限制，bot 自动跟踪
 - 日志输出到 `logs/YYYY-MM-DD.log`（每日轮转）+ 内存 ring buffer → UI
-- Conventional commits 规范

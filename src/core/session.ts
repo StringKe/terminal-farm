@@ -35,6 +35,14 @@ export class Session {
     this.conn.on('goldChanged', (gold) => this.store.updateUser({ gold }))
     this.conn.on('expChanged', (exp) => this.store.updateUser({ exp }))
 
+    // Handle connection errors and close to prevent unhandled EventEmitter errors
+    this.conn.on('error', (err) => {
+      logWarn('会话', `连接错误: ${err.message}`)
+    })
+    this.conn.on('close', (code) => {
+      log('会话', `连接关闭 (code=${code})`)
+    })
+
     // Forward logs to store
     this.logUnsub = onLog((entry) => this.store.pushLog(entry))
   }
