@@ -48,6 +48,12 @@ export async function loadProto(): Promise<void> {
   types.SellReply = root.lookupType('gamepb.itempb.SellReply')
   types.PlantRequest = root.lookupType('gamepb.plantpb.PlantRequest')
   types.PlantReply = root.lookupType('gamepb.plantpb.PlantReply')
+  types.UpgradeLandRequest = root.lookupType('gamepb.plantpb.UpgradeLandRequest')
+  types.UpgradeLandReply = root.lookupType('gamepb.plantpb.UpgradeLandReply')
+  types.UnlockLandRequest = root.lookupType('gamepb.plantpb.UnlockLandRequest')
+  types.UnlockLandReply = root.lookupType('gamepb.plantpb.UnlockLandReply')
+  types.CheckCanOperateRequest = root.lookupType('gamepb.plantpb.CheckCanOperateRequest')
+  types.CheckCanOperateReply = root.lookupType('gamepb.plantpb.CheckCanOperateReply')
 
   // Shop
   types.ShopProfilesRequest = root.lookupType('gamepb.shoppb.ShopProfilesRequest')
@@ -78,6 +84,22 @@ export async function loadProto(): Promise<void> {
   types.ClaimTaskRewardReply = root.lookupType('gamepb.taskpb.ClaimTaskRewardReply')
   types.BatchClaimTaskRewardRequest = root.lookupType('gamepb.taskpb.BatchClaimTaskRewardRequest')
   types.BatchClaimTaskRewardReply = root.lookupType('gamepb.taskpb.BatchClaimTaskRewardReply')
+  types.ClaimDailyRewardRequest = root.lookupType('gamepb.taskpb.ClaimDailyRewardRequest')
+  types.ClaimDailyRewardReply = root.lookupType('gamepb.taskpb.ClaimDailyRewardReply')
+
+  // Email
+  types.GetEmailListRequest = root.lookupType('gamepb.emailpb.GetEmailListRequest')
+  types.GetEmailListReply = root.lookupType('gamepb.emailpb.GetEmailListReply')
+  types.BatchClaimEmailRequest = root.lookupType('gamepb.emailpb.BatchClaimEmailRequest')
+  types.BatchClaimEmailReply = root.lookupType('gamepb.emailpb.BatchClaimEmailReply')
+  types.NewEmailNotify = root.lookupType('gamepb.emailpb.NewEmailNotify')
+
+  // Illustrated
+  types.GetIllustratedLevelListV2Request = root.lookupType('gamepb.illustratedpb.GetIllustratedLevelListV2Request')
+  types.GetIllustratedLevelListV2Reply = root.lookupType('gamepb.illustratedpb.GetIllustratedLevelListV2Reply')
+  types.ClaimAllRewardsV2Request = root.lookupType('gamepb.illustratedpb.ClaimAllRewardsV2Request')
+  types.ClaimAllRewardsV2Reply = root.lookupType('gamepb.illustratedpb.ClaimAllRewardsV2Reply')
+  types.IllustratedRewardRedDotNotifyV2 = root.lookupType('gamepb.illustratedpb.IllustratedRewardRedDotNotifyV2')
 
   // Notify
   types.LandsNotify = root.lookupType('gamepb.plantpb.LandsNotify')

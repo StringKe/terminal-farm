@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package gamepb.plantpb;
 
+import "corepb.proto";
+
 // ============ 生长阶段枚举 ============
 enum PlantPhase {
     PHASE_UNKNOWN = 0;
@@ -41,18 +43,26 @@ message LandInfo {
     }
 }
 
-// 土地解锁条件 (简化)
-message LandUnlockCondition {
-    int64 need_level = 1;
-    int64 need_gold = 2;
-    // ... 其他条件字段
+// 颜色数量需求
+message NeedColorCount {
+    int64 level = 1;
+    int64 count = 2;
 }
 
-// 土地升级条件 (简化)
+// 土地解锁条件
+message LandUnlockCondition {
+    int64 preceeding_land_id = 1;
+    int64 level_need = 2;
+    int64 gold_need = 3;
+    repeated corepb.Item items_need = 4;
+    repeated NeedColorCount need_color_count = 5;
+}
+
+// 土地升级条件
 message LandUpgradeCondition {
-    int64 need_level = 1;
-    int64 need_gold = 2;
-    // ... 其他条件字段
+    int64 preceeding_lands_count_need = 1;
+    int64 level_need = 2;
+    repeated corepb.Item items_need = 3;
 }
 
 // ============ 植物信息 ============
@@ -139,9 +149,10 @@ message HarvestRequest {
 
 message HarvestReply {
     repeated LandInfo land = 1;
-    // repeated Item items = 2;     // corepb.Item
-    // repeated Item lost_items = 3;
+    repeated corepb.Item items = 2;
+    repeated corepb.Item lost_items = 3;
     repeated OperationLimit operation_limits = 4;
+    map<int64, string> warnings = 5;
 }
 
 // --- 浇水 ---
@@ -213,13 +224,13 @@ message FertilizeRequest {
 message FertilizeReply {
     repeated LandInfo land = 1;
     repeated OperationLimit operation_limits = 2;
-    int64 fertilizer = 3;  // 剩余肥料时间
+    corepb.Item fertilizer = 3;
 }
 
 // --- 放虫 ---
 message PutInsectsRequest {
-    repeated int64 land_ids = 1;
-    int64 host_gid = 2;
+    int64 host_gid = 1;
+    repeated int64 land_ids = 2;
 }
 
 message PutInsectsReply {
@@ -229,13 +240,43 @@ message PutInsectsReply {
 
 // --- 放草 ---
 message PutWeedsRequest {
-    repeated int64 land_ids = 1;
-    int64 host_gid = 2;
+    int64 host_gid = 1;
+    repeated int64 land_ids = 2;
 }
 
 message PutWeedsReply {
     repeated LandInfo land = 1;
     repeated OperationLimit operation_limits = 2;
+}
+
+// --- 升级土地 ---
+message UpgradeLandRequest {
+    int64 land_id = 1;
+}
+
+message UpgradeLandReply {
+    LandInfo land = 1;
+}
+
+// --- 解锁土地 ---
+message UnlockLandRequest {
+    int64 land_id = 1;
+    bool do_shared = 2;
+}
+
+message UnlockLandReply {
+    LandInfo land = 1;
+}
+
+// --- 检查能否操作 ---
+message CheckCanOperateRequest {
+    int64 host_gid = 1;
+    int64 operation_id = 2;
+}
+
+message CheckCanOperateReply {
+    bool can_operate = 1;
+    int64 can_steal_num = 2;
 }
 
 // ============ 服务器推送通知 ============

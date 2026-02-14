@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package gamepb.weatherpb;
+
+// ============ 天气时段 ============
+message WeatherSlot {
+    int64 start_time = 1;
+    int64 end_time = 2;
+    int64 weather = 3;
+    bool is_current = 4;
+}
+
+// ============ 请求/回复 ============
+
+// --- 获取今日天气 ---
+message GetTodayWeatherRequest {}
+
+message GetTodayWeatherReply {
+    repeated WeatherSlot today_weathers = 1;
+}
+
+// --- 获取当前天气 ---
+message GetCurrentWeatherRequest {}
+
+message GetCurrentWeatherReply {
+    WeatherSlot current_weather = 1;
+}

@@ -483,6 +483,9 @@ export class FarmManager {
         this.isFirstReplantLog = false
         this.logBestSeedOnStartup(unlockedLandCount, landDist)
       }
+      // 自动升级土地
+      await this.autoUpgradeLands(lands)
+
       if (config.autoReplantMode === 'always' && status.growing.length > 0)
         await this.autoReplantIfNeeded(lands, 'check')
     } catch (err: any) {
@@ -602,6 +605,28 @@ export class FarmManager {
       }
     } catch (e: any) {
       logWarn('推荐', `启动推荐计算失败: ${e.message}`)
+    }
+  }
+
+  async upgradeLand(landId: number): Promise<any> {
+    const body = types.UpgradeLandRequest.encode(types.UpgradeLandRequest.create({ land_id: toLong(landId) })).finish()
+    const { body: replyBody } = await this.conn.sendMsgAsync('gamepb.plantpb.PlantService', 'UpgradeLand', body)
+    return types.UpgradeLandReply.decode(replyBody)
+  }
+
+  private async autoUpgradeLands(lands: any[]): Promise<void> {
+    const upgradable = lands.filter((l: any) => l.unlocked && l.could_upgrade)
+    if (!upgradable.length) return
+    for (const land of upgradable) {
+      const landId = toNum(land.id)
+      try {
+        const reply = (await this.upgradeLand(landId)) as any
+        const newLevel = reply.land ? toNum(reply.land.level) : '?'
+        log('升级', `土地#${landId} 升级成功 → 等级${newLevel}`)
+        await sleep(200)
+      } catch (e: any) {
+        logWarn('升级', `土地#${landId} 升级失败: ${e.message}`)
+      }
     }
   }
 

@@ -58,6 +58,17 @@ export class TaskManager {
     return summary.join('/')
   }
 
+  async claimDailyReward(type: number, pointIds: number[]): Promise<any> {
+    const body = types.ClaimDailyRewardRequest.encode(
+      types.ClaimDailyRewardRequest.create({
+        type,
+        point_ids: pointIds.map((id) => toLong(id)),
+      }),
+    ).finish()
+    const { body: replyBody } = await this.conn.sendMsgAsync('gamepb.taskpb.TaskService', 'ClaimDailyReward', body)
+    return types.ClaimDailyRewardReply.decode(replyBody)
+  }
+
   async checkAndClaimTasks(): Promise<void> {
     try {
       const reply = (await this.getTaskInfo()) as any
@@ -66,11 +77,37 @@ export class TaskManager {
       const allTasks = [...(taskInfo.growth_tasks || []), ...(taskInfo.daily_tasks || []), ...(taskInfo.tasks || [])]
       this.syncTaskList(allTasks)
       const claimable = this.analyzeTaskList(allTasks)
-      if (!claimable.length) return
-      log('任务', `发现 ${claimable.length} 个可领取任务`)
-      await this.claimTasksFromList(claimable)
+      if (claimable.length) {
+        log('任务', `发现 ${claimable.length} 个可领取任务`)
+        await this.claimTasksFromList(claimable)
+      }
+      // 检查活跃度奖励
+      await this.checkAndClaimActives(taskInfo.actives || [])
     } catch (e: any) {
       logWarn('任务', `检查任务失败: ${e.message}`)
+    }
+  }
+
+  private async checkAndClaimActives(actives: any[]): Promise<void> {
+    for (const active of actives) {
+      const activeType = toNum(active.type)
+      const rewards = active.rewards || []
+      // status === 2 (DONE) 表示已达标可领取
+      const claimable = rewards.filter((r: any) => toNum(r.status) === 2)
+      if (!claimable.length) continue
+      const pointIds = claimable.map((r: any) => toNum(r.point_id))
+      const typeName = activeType === 1 ? '日活跃' : activeType === 2 ? '周活跃' : `活跃${activeType}`
+      log('活跃', `${typeName} 发现 ${claimable.length} 个可领取奖励`)
+      try {
+        const reply = (await this.claimDailyReward(activeType, pointIds)) as any
+        const items = reply.items || []
+        if (items.length > 0) {
+          const rewardStr = this.getRewardSummary(items)
+          log('活跃', `${typeName} 领取: ${rewardStr}`)
+        }
+      } catch (e: any) {
+        logWarn('活跃', `${typeName} 领取失败: ${e.message}`)
+      }
     }
   }
 
@@ -108,11 +145,16 @@ export class TaskManager {
     const allTasks = [...(taskInfo.growth_tasks || []), ...(taskInfo.daily_tasks || []), ...(taskInfo.tasks || [])]
     this.syncTaskList(allTasks)
     const claimable = this.analyzeTaskList(allTasks)
-    if (!claimable.length) return
-    log('任务', `有 ${claimable.length} 个任务可领取，准备自动领取...`)
-    this.claimTimer = setTimeout(() => {
+    const hasClaimable = claimable.length > 0
+    const actives = taskInfo.actives || []
+
+    if (!hasClaimable && !actives.length) return
+    if (hasClaimable) log('任务', `有 ${claimable.length} 个任务可领取，准备自动领取...`)
+
+    this.claimTimer = setTimeout(async () => {
       this.claimTimer = null
-      this.claimTasksFromList(claimable)
+      if (hasClaimable) await this.claimTasksFromList(claimable)
+      await this.checkAndClaimActives(actives)
     }, 1000)
   }
 

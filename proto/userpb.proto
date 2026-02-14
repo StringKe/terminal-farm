@@ -88,7 +88,7 @@ message VersionInfo {
     int32 status = 1;
     string version_recommend = 2;
     string version_force = 3;
-    string res_version = 4;
+    string version_protocol = 4;
 }
 
 // ============ 心跳 ============

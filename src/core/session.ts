@@ -2,8 +2,10 @@ import { config } from '../config/index.js'
 import { Connection } from '../protocol/connection.js'
 import { SessionStore } from '../store/session-store.js'
 import { log, logWarn, onLog } from '../utils/logger.js'
+import { EmailManager } from './email.js'
 import { FarmManager } from './farm.js'
 import { FriendManager } from './friend.js'
+import { IllustratedManager } from './illustrated.js'
 import { processInviteCodes } from './invite.js'
 import { TaskManager } from './task.js'
 import { WarehouseManager } from './warehouse.js'
@@ -19,6 +21,8 @@ export class Session {
   readonly friend: FriendManager
   readonly task: TaskManager
   readonly warehouse: WarehouseManager
+  readonly illustrated: IllustratedManager
+  readonly email: EmailManager
 
   private logUnsub: (() => void) | null = null
   private code = ''
@@ -38,6 +42,8 @@ export class Session {
     this.friend = new FriendManager(this.conn, this.store, this.farm)
     this.task = new TaskManager(this.conn, this.store)
     this.warehouse = new WarehouseManager(this.conn, this.store)
+    this.illustrated = new IllustratedManager(this.conn)
+    this.email = new EmailManager(this.conn)
 
     // Forward connection events to store
     this.conn.on('login', (state) => this.store.updateUser(state))
@@ -93,6 +99,8 @@ export class Session {
     this.friend.start()
     this.task.start()
     this.warehouse.start()
+    this.illustrated.start()
+    this.email.start()
   }
 
   private stopManagers(): void {
@@ -100,6 +108,8 @@ export class Session {
     this.friend.stop()
     this.task.stop()
     this.warehouse.stop()
+    this.illustrated.stop()
+    this.email.stop()
   }
 
   private async attemptReconnect(): Promise<void> {

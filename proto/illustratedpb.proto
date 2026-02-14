@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package gamepb.illustratedpb;
+
+import "corepb.proto";
+
+// ============ 图鉴信息 ============
+message IllustratedInfoV2 {
+    int32 fruit_id = 1;
+    int32 rarity = 2;
+    bool unlocked = 3;
+    int32 progress = 4;
+    int32 layer = 5;
+    repeated corepb.Item reward = 6;
+    bool is_new = 7;
+}
+
+// ============ 图鉴等级信息 ============
+message IllustratedLevelInfoV2 {
+    int32 level = 1;
+    int32 point_condition = 2;
+    repeated corepb.Item rewards = 3;
+    bool can_claim = 4;
+    bool claimed = 5;
+}
+
+// ============ 解锁水果信息 ============
+message UnlockedFruitInfo {
+    int32 fruit_id = 1;
+    int32 progress = 2;
+    int32 progress_to_next_level = 3;
+    int32 total_progress_before = 4;
+    int32 total_progress_after = 5;
+    int32 level_before = 6;
+    int32 level_after = 7;
+}
+
+// ============ 请求/回复 ============
+
+// --- 获取图鉴列表 ---
+message GetIllustratedListV2Request {
+    int32 rarity = 1;
+    int32 type = 2;
+}
+
+message GetIllustratedListV2Reply {
+    repeated IllustratedInfoV2 list = 1;
+}
+
+// --- 获取图鉴等级列表 ---
+message GetIllustratedLevelListV2Request {
+    int32 type = 1;
+}
+
+message GetIllustratedLevelListV2Reply {
+    int32 current_level = 1;
+    int32 total_progress = 2;
+    repeated IllustratedLevelInfoV2 level_list = 3;
+}
+
+// --- 领取所有图鉴奖励 ---
+message ClaimAllRewardsV2Request {
+    int32 type = 1;
+}
+
+message ClaimAllRewardsV2Reply {
+    repeated corepb.Item total_rewards = 1;
+    repeated int32 claimed_level_ids = 2;
+    int32 current_level = 3;
+    repeated corepb.Item next_level_rewards = 4;
+}
+
+// --- 清除新解锁水果标记 ---
+message ClearNewUnlockedFruitsV2Request {
+    repeated int32 fruit_ids = 1;
+}
+
+message ClearNewUnlockedFruitsV2Reply {
+    repeated int32 cleared_fruit_ids = 1;
+}
+
+// ============ 服务器推送 ============
+
+message IllustratedChangeNotifyV2 {
+    repeated UnlockedFruitInfo unlocked_fruits = 1;
+    int32 old_level = 2;
+    int32 new_level = 3;
+    int32 type = 4;
+    int32 old_progress = 5;
+    int32 current_progress = 6;
+}
+
+message IllustratedRewardRedDotNotifyV2 {
+    bool normal_reward_available = 1;
+    bool premium_reward_available = 2;
+}

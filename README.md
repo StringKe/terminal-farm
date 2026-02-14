@@ -6,13 +6,36 @@ QQ/微信农场自动化挂机工具 — 全屏终端 UI + 多账号 + HTTP API
 
 ## 特性
 
+### 农场自动化
+- **智能种植** — 按土地等级独立计算最优种子（经验/小时效率排名），自动购买+种植+施肥
+- **全流程管理** — 收获、浇水、除草、除虫、铲除枯死作物，全自动循环
+- **土地升级** — 检测可升级地块，自动执行升级
+- **智能换种** — 升级后重新评估最优作物，可选始终换种 / 仅升级换种
+- **换种保护** — 成长进度超过阈值（默认 80%）的作物不会被铲除
+
+### 好友系统
+- **好友巡查** — 自动访问好友农场，帮忙浇水/除草/除虫
+- **自动偷菜** — 发现可偷的成熟作物自动采摘
+- **每日统计** — 持久化记录偷菜/浇水/除草/除虫次数
+- **操作限制追踪** — 自动跟踪每日操作次数和经验上限，耗尽后停止
+- **好友申请** — 自动接受好友申请（含推送触发）
+
+### 奖励自动领取
+- **任务奖励** — 检测已完成的成长/每日任务，自动领取（支持分享翻倍）
+- **活跃度奖励** — 日活跃/周活跃达标后自动领取各档位奖励
+- **图鉴奖励** — 检测图鉴等级奖励，一键全部领取（含推送触发）
+- **邮件奖励** — 自动检查系统邮件，批量领取附件奖励（含推送触发）
+
+### 仓库管理
+- **自动售果** — 定时扫描背包，自动出售果实类物品换金币
+
+### 平台与架构
 - **全屏终端 UI** — Ink (React CLI) 驱动，响应式三档布局
-- **多账号** — 数字键/Tab 切换，每账号独立 WebSocket 连接
-- **自动农场** — 收获、种植、施肥、除草、除虫、浇水，智能换种（经验效率排名）
-- **好友巡查** — 帮忙除草除虫浇水、自动偷菜，每日统计持久化
-- **自动任务** — 检测并领取可完成的任务奖励
-- **HTTP API** — RESTful 接口，可选启用
+- **多账号** — 每账号独立 WebSocket 连接，数字键/Tab 切换
 - **双平台** — QQ（扫码 + code 复用）/ 微信（一次性 code）
+- **HTTP API** — RESTful 接口 + Swagger UI，可选启用
+- **服务器推送** — 实时响应土地变化/升级/任务完成/新邮件/图鉴红点等推送
+- **断线重连** — 自动检测连接超时，最多 3 次重连尝试
 
 ## 快速开始
 
@@ -45,15 +68,96 @@ bun run src/main.ts --code <code> --wx
 | `--api-port <端口>` | API 端口 | `3000` |
 | `--verify` | 验证 proto 加载后退出 | — |
 
+## 运行时配置
+
+| 配置项 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `farmCheckInterval` | ms | `1000` | 农场巡查频率 |
+| `friendCheckInterval` | ms | `10000` | 好友巡查频率 |
+| `autoReplantMode` | enum | `'levelup'` | `'levelup'` 升级换种 / `'always'` 始终换种 / `false` 不换 |
+| `replantProtectPercent` | 0-100 | `80` | 成长进度超过此值不铲除 |
+| `forceLowestLevelCrop` | bool | `false` | 强制种最便宜的作物（忽略效率） |
+| `apiEnabled` | bool | `false` | 启用 HTTP API |
+| `apiPort` | number | `3000` | API 端口 |
+
 ## 键盘操作
 
 | 按键 | 功能 |
 |------|------|
 | `1-9` | 切换账号 |
 | `Tab` / `Shift+Tab` | 下/上一个账号 |
-| `+` | 添加新账号 |
+| `←` / `→` | 切换账号 |
 | `↑` / `↓` | 滚动日志 |
+| `+` | 添加新账号 |
 | `q` / `Ctrl+C` | 退出 |
+
+## HTTP API
+
+启用 `--api` 后，所有端口均为 POST（JSON body），支持 CORS。
+
+| 端点 | 说明 |
+|------|------|
+| `POST /account/list` | 账号列表 |
+| `POST /account/add` | 添加账号 `{platform, code}` |
+| `POST /account/remove` | 移除账号 `{id}` |
+| `POST /farm/status` | 农场状态 `{accountId}` |
+| `POST /farm/harvest` | 触发收获 `{accountId}` |
+| `POST /farm/replant` | 触发换种 `{accountId}` |
+| `POST /friend/list` | 好友列表+统计 `{accountId}` |
+| `POST /friend/patrol` | 触发好友巡查 `{accountId}` |
+| `POST /system/logs` | 查看日志 `{limit, offset}` |
+| `POST /system/config` | 当前配置 |
+| `POST /system/version` | 版本信息 |
+| `GET /swagger` | Swagger UI |
+| `GET /openapi.json` | OpenAPI 3.0 规范 |
+
+## UI 面板
+
+| 面板 | 内容 |
+|------|------|
+| **状态栏** | 平台、昵称、等级、金币、经验进度条 |
+| **农场** | 地块网格（作物名称、生长进度条、倒计时、状态标记） |
+| **背包** | 前 10 种物品及数量 |
+| **任务** | 可领取/已完成/总数，前 3 条任务预览 |
+| **好友** | 好友列表 + 每日偷菜/浇水/除草/除虫统计 |
+| **日志** | 最近 50 条操作日志（可滚动） |
+
+## 经验效率分析
+
+```bash
+bun run tools/calc-exp-yield.ts --lands 18 --level 27
+```
+
+按土地等级独立计算最优种子排名，输出 exp/h 效率、生长时间、种子价格。
+
+## 项目结构
+
+```
+src/
+├── main.ts              # 入口，CLI 参数解析
+├── app.tsx              # Ink 根组件，路由 login/dashboard
+├── core/                # 业务逻辑
+│   ├── session.ts       # 单账号编排 (Connection + Store + Managers)
+│   ├── account.ts       # 多账号管理
+│   ├── farm.ts          # 农场操作循环 + 土地升级
+│   ├── friend.ts        # 好友巡查循环
+│   ├── task.ts          # 任务 + 活跃度奖励领取
+│   ├── warehouse.ts     # 仓库自动售果
+│   ├── illustrated.ts   # 图鉴奖励自动领取
+│   ├── email.ts         # 邮件奖励自动领取
+│   ├── exp-calculator.ts # 经验效率计算器
+│   └── invite.ts        # 微信邀请码处理
+├── protocol/            # 协议层
+│   ├── connection.ts    # WebSocket 连接（每账号独立实例）
+│   ├── codec.ts         # Protobuf 编解码
+│   ├── proto-loader.ts  # 消息类型注册
+│   └── login.ts         # 登录流程
+├── store/               # 状态管理 (EventEmitter → React)
+├── ui/                  # 终端 UI (screens, panels, hooks, components)
+├── config/              # 配置 + 游戏数据
+├── api/                 # HTTP API (Bun.serve)
+└── utils/               # 工具函数
+```
 
 ## 技术栈
 
@@ -65,36 +169,6 @@ bun run src/main.ts --code <code> --wx
 | Protocol | Protobuf (protobufjs) |
 | Lint | Biome |
 | Validation | Zod |
-
-## 项目结构
-
-```
-src/
-├── main.ts              # 入口，CLI 参数解析
-├── app.tsx              # Ink 根组件，路由 login/dashboard
-├── core/                # 业务逻辑
-│   ├── session.ts       # 单账号编排 (Connection + Store + Managers)
-│   ├── account.ts       # 多账号管理
-│   ├── farm.ts          # 农场操作循环
-│   ├── friend.ts        # 好友巡查循环
-│   └── task.ts          # 任务检测与领取
-├── protocol/            # 协议层
-│   ├── connection.ts    # WebSocket 连接（每账号独立实例）
-│   ├── codec.ts         # Protobuf 编解码
-│   └── login.ts         # 登录流程
-├── store/               # 状态管理 (EventEmitter → React)
-│   ├── session-store.ts # 单账号状态
-│   ├── account-store.ts # 账号列表状态
-│   └── persist.ts       # JSON 持久化
-├── ui/                  # 终端 UI
-│   ├── screens/         # 页面 (login, dashboard)
-│   ├── panels/          # 面板 (farm, bag, friend, task, log)
-│   ├── hooks/           # React hooks
-│   └── components/      # 通用组件
-├── config/              # 配置 + 游戏数据
-├── api/                 # HTTP API (Bun.serve)
-└── utils/               # 工具函数
-```
 
 ## 注意事项
 

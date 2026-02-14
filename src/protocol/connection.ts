@@ -285,6 +285,28 @@ export class Connection extends EventEmitter {
         } catch {}
         return
       }
+
+      if (type.includes('NewEmailNotify')) {
+        try {
+          const notify = types.NewEmailNotify.decode(eventBody) as any
+          const emails = notify.new_emails || []
+          if (emails.length > 0) {
+            log('推送', `收到 ${emails.length} 封新邮件`)
+            this.emit('newEmailNotify', emails)
+          }
+        } catch {}
+        return
+      }
+
+      if (type.includes('IllustratedRewardRedDotNotifyV2')) {
+        try {
+          const notify = types.IllustratedRewardRedDotNotifyV2.decode(eventBody) as any
+          if (notify.normal_reward_available || notify.premium_reward_available) {
+            this.emit('illustratedRewardRedDot', notify)
+          }
+        } catch {}
+        return
+      }
     } catch (e: any) {
       logWarn('推送', `解码失败: ${e.message}`)
     }

@@ -324,7 +324,7 @@
                   "type": "string",
                   "id": 3
                 },
-                "res_version": {
+                "version_protocol": {
                   "type": "string",
                   "id": 4
                 }
@@ -488,27 +488,58 @@
                 }
               }
             },
-            "LandUnlockCondition": {
+            "NeedColorCount": {
               "fields": {
-                "need_level": {
+                "level": {
                   "type": "int64",
                   "id": 1
                 },
-                "need_gold": {
+                "count": {
                   "type": "int64",
                   "id": 2
                 }
               }
             },
-            "LandUpgradeCondition": {
+            "LandUnlockCondition": {
               "fields": {
-                "need_level": {
+                "preceeding_land_id": {
                   "type": "int64",
                   "id": 1
                 },
-                "need_gold": {
+                "level_need": {
                   "type": "int64",
                   "id": 2
+                },
+                "gold_need": {
+                  "type": "int64",
+                  "id": 3
+                },
+                "items_need": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 4
+                },
+                "need_color_count": {
+                  "rule": "repeated",
+                  "type": "NeedColorCount",
+                  "id": 5
+                }
+              }
+            },
+            "LandUpgradeCondition": {
+              "fields": {
+                "preceeding_lands_count_need": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "level_need": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "items_need": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 3
                 }
               }
             },
@@ -725,10 +756,25 @@
                   "type": "LandInfo",
                   "id": 1
                 },
+                "items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 2
+                },
+                "lost_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 3
+                },
                 "operation_limits": {
                   "rule": "repeated",
                   "type": "OperationLimit",
                   "id": 4
+                },
+                "warnings": {
+                  "keyType": "int64",
+                  "type": "string",
+                  "id": 5
                 }
               }
             },
@@ -907,19 +953,19 @@
                   "id": 2
                 },
                 "fertilizer": {
-                  "type": "int64",
+                  "type": "corepb.Item",
                   "id": 3
                 }
               }
             },
             "PutInsectsRequest": {
               "fields": {
-                "land_ids": {
-                  "rule": "repeated",
+                "host_gid": {
                   "type": "int64",
                   "id": 1
                 },
-                "host_gid": {
+                "land_ids": {
+                  "rule": "repeated",
                   "type": "int64",
                   "id": 2
                 }
@@ -941,12 +987,12 @@
             },
             "PutWeedsRequest": {
               "fields": {
-                "land_ids": {
-                  "rule": "repeated",
+                "host_gid": {
                   "type": "int64",
                   "id": 1
                 },
-                "host_gid": {
+                "land_ids": {
+                  "rule": "repeated",
                   "type": "int64",
                   "id": 2
                 }
@@ -962,6 +1008,66 @@
                 "operation_limits": {
                   "rule": "repeated",
                   "type": "OperationLimit",
+                  "id": 2
+                }
+              }
+            },
+            "UpgradeLandRequest": {
+              "fields": {
+                "land_id": {
+                  "type": "int64",
+                  "id": 1
+                }
+              }
+            },
+            "UpgradeLandReply": {
+              "fields": {
+                "land": {
+                  "type": "LandInfo",
+                  "id": 1
+                }
+              }
+            },
+            "UnlockLandRequest": {
+              "fields": {
+                "land_id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "do_shared": {
+                  "type": "bool",
+                  "id": 2
+                }
+              }
+            },
+            "UnlockLandReply": {
+              "fields": {
+                "land": {
+                  "type": "LandInfo",
+                  "id": 1
+                }
+              }
+            },
+            "CheckCanOperateRequest": {
+              "fields": {
+                "host_gid": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "operation_id": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "CheckCanOperateReply": {
+              "fields": {
+                "can_operate": {
+                  "type": "bool",
+                  "id": 1
+                },
+                "can_steal_num": {
+                  "type": "int64",
                   "id": 2
                 }
               }
@@ -1586,19 +1692,54 @@
                 }
               }
             },
-            "Active": {
+            "ActiveType": {
+              "values": {
+                "ACTIVE_TYPE_UNKNOWN": 0,
+                "DAILYACTIVE": 1,
+                "WEEKLYACTIVE": 2
+              }
+            },
+            "ActiveStatus": {
+              "values": {
+                "NONE_UNKNOWN": 0,
+                "WAIT": 1,
+                "DONE": 2
+              }
+            },
+            "ActiveReward": {
               "fields": {
-                "id": {
+                "point_id": {
                   "type": "int64",
                   "id": 1
                 },
-                "status": {
-                  "type": "int32",
+                "need_progress": {
+                  "type": "int64",
                   "id": 2
                 },
-                "items": {
+                "status": {
+                  "type": "int32",
+                  "id": 3
+                },
+                "rewards": {
                   "rule": "repeated",
                   "type": "corepb.Item",
+                  "id": 4
+                }
+              }
+            },
+            "Active": {
+              "fields": {
+                "type": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "progress": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "rewards": {
+                  "rule": "repeated",
+                  "type": "ActiveReward",
                   "id": 3
                 }
               }
@@ -1699,10 +1840,570 @@
                 }
               }
             },
+            "ClaimDailyRewardRequest": {
+              "fields": {
+                "type": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "point_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "ClaimDailyRewardReply": {
+              "fields": {
+                "items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                },
+                "task_info": {
+                  "type": "TaskInfo",
+                  "id": 2
+                },
+                "compensated_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 3
+                }
+              }
+            },
+            "ClientReportProgressRequest": {
+              "fields": {
+                "task_id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "progress": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "ClientReportProgressReply": {
+              "fields": {
+                "task_info": {
+                  "type": "TaskInfo",
+                  "id": 1
+                }
+              }
+            },
             "TaskInfoNotify": {
               "fields": {
                 "task_info": {
                   "type": "TaskInfo",
+                  "id": 1
+                }
+              }
+            }
+          }
+        },
+        "emailpb": {
+          "nested": {
+            "EmailType": {
+              "values": {
+                "EMAIL_TYPE_UNKNOWN": 0,
+                "EMAIL_TYPE_SYSTEM": 1,
+                "EMAIL_TYPE_PLAYER": 2
+              }
+            },
+            "EmailPreview": {
+              "fields": {
+                "email_id": {
+                  "type": "string",
+                  "id": 1
+                },
+                "email_type": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "title": {
+                  "type": "string",
+                  "id": 3
+                },
+                "is_read": {
+                  "type": "bool",
+                  "id": 4
+                },
+                "has_reward": {
+                  "type": "bool",
+                  "id": 5
+                },
+                "send_time": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "desc": {
+                  "type": "string",
+                  "id": 7
+                },
+                "expire_time": {
+                  "type": "int64",
+                  "id": 8
+                },
+                "tips": {
+                  "type": "string",
+                  "id": 9
+                }
+              }
+            },
+            "EmailDetail": {
+              "fields": {
+                "email_id": {
+                  "type": "string",
+                  "id": 1
+                },
+                "email_type": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "title": {
+                  "type": "string",
+                  "id": 3
+                },
+                "content": {
+                  "type": "string",
+                  "id": 4
+                },
+                "rewards": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 5
+                },
+                "send_time": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "expire_time": {
+                  "type": "int64",
+                  "id": 7
+                },
+                "is_read": {
+                  "type": "bool",
+                  "id": 8
+                },
+                "reason": {
+                  "type": "string",
+                  "id": 9
+                },
+                "is_claimed": {
+                  "type": "bool",
+                  "id": 10
+                },
+                "tips": {
+                  "type": "string",
+                  "id": 11
+                }
+              }
+            },
+            "GetEmailListRequest": {
+              "fields": {
+                "email_type": {
+                  "type": "int32",
+                  "id": 1
+                }
+              }
+            },
+            "GetEmailListReply": {
+              "fields": {
+                "emails": {
+                  "rule": "repeated",
+                  "type": "EmailPreview",
+                  "id": 1
+                }
+              }
+            },
+            "ReadEmailRequest": {
+              "fields": {
+                "email_type": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "email_id": {
+                  "type": "string",
+                  "id": 2
+                }
+              }
+            },
+            "ReadEmailReply": {
+              "fields": {
+                "email": {
+                  "type": "EmailDetail",
+                  "id": 1
+                }
+              }
+            },
+            "BatchReadEmailRequest": {
+              "fields": {
+                "email_type": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "email_ids": {
+                  "rule": "repeated",
+                  "type": "string",
+                  "id": 2
+                }
+              }
+            },
+            "BatchReadEmailReply": {
+              "fields": {}
+            },
+            "ClaimEmailRequest": {
+              "fields": {
+                "email_type": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "email_id": {
+                  "type": "string",
+                  "id": 2
+                }
+              }
+            },
+            "ClaimEmailReply": {
+              "fields": {
+                "rewards": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                }
+              }
+            },
+            "BatchClaimEmailRequest": {
+              "fields": {
+                "email_type": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "email_ids": {
+                  "rule": "repeated",
+                  "type": "string",
+                  "id": 2
+                }
+              }
+            },
+            "BatchClaimEmailReply": {
+              "fields": {
+                "rewards": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                },
+                "unclaimed_email_ids": {
+                  "rule": "repeated",
+                  "type": "string",
+                  "id": 2
+                }
+              }
+            },
+            "BatchDeleteEmailRequest": {
+              "fields": {
+                "email_type": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "email_ids": {
+                  "rule": "repeated",
+                  "type": "string",
+                  "id": 2
+                }
+              }
+            },
+            "BatchDeleteEmailReply": {
+              "fields": {
+                "undeleted_email_ids": {
+                  "rule": "repeated",
+                  "type": "string",
+                  "id": 1
+                }
+              }
+            },
+            "NewEmailNotify": {
+              "fields": {
+                "new_emails": {
+                  "rule": "repeated",
+                  "type": "EmailPreview",
+                  "id": 1
+                }
+              }
+            }
+          }
+        },
+        "illustratedpb": {
+          "nested": {
+            "IllustratedInfoV2": {
+              "fields": {
+                "fruit_id": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "rarity": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "unlocked": {
+                  "type": "bool",
+                  "id": 3
+                },
+                "progress": {
+                  "type": "int32",
+                  "id": 4
+                },
+                "layer": {
+                  "type": "int32",
+                  "id": 5
+                },
+                "reward": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 6
+                },
+                "is_new": {
+                  "type": "bool",
+                  "id": 7
+                }
+              }
+            },
+            "IllustratedLevelInfoV2": {
+              "fields": {
+                "level": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "point_condition": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "rewards": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 3
+                },
+                "can_claim": {
+                  "type": "bool",
+                  "id": 4
+                },
+                "claimed": {
+                  "type": "bool",
+                  "id": 5
+                }
+              }
+            },
+            "UnlockedFruitInfo": {
+              "fields": {
+                "fruit_id": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "progress": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "progress_to_next_level": {
+                  "type": "int32",
+                  "id": 3
+                },
+                "total_progress_before": {
+                  "type": "int32",
+                  "id": 4
+                },
+                "total_progress_after": {
+                  "type": "int32",
+                  "id": 5
+                },
+                "level_before": {
+                  "type": "int32",
+                  "id": 6
+                },
+                "level_after": {
+                  "type": "int32",
+                  "id": 7
+                }
+              }
+            },
+            "GetIllustratedListV2Request": {
+              "fields": {
+                "rarity": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "type": {
+                  "type": "int32",
+                  "id": 2
+                }
+              }
+            },
+            "GetIllustratedListV2Reply": {
+              "fields": {
+                "list": {
+                  "rule": "repeated",
+                  "type": "IllustratedInfoV2",
+                  "id": 1
+                }
+              }
+            },
+            "GetIllustratedLevelListV2Request": {
+              "fields": {
+                "type": {
+                  "type": "int32",
+                  "id": 1
+                }
+              }
+            },
+            "GetIllustratedLevelListV2Reply": {
+              "fields": {
+                "current_level": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "total_progress": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "level_list": {
+                  "rule": "repeated",
+                  "type": "IllustratedLevelInfoV2",
+                  "id": 3
+                }
+              }
+            },
+            "ClaimAllRewardsV2Request": {
+              "fields": {
+                "type": {
+                  "type": "int32",
+                  "id": 1
+                }
+              }
+            },
+            "ClaimAllRewardsV2Reply": {
+              "fields": {
+                "total_rewards": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                },
+                "claimed_level_ids": {
+                  "rule": "repeated",
+                  "type": "int32",
+                  "id": 2
+                },
+                "current_level": {
+                  "type": "int32",
+                  "id": 3
+                },
+                "next_level_rewards": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 4
+                }
+              }
+            },
+            "ClearNewUnlockedFruitsV2Request": {
+              "fields": {
+                "fruit_ids": {
+                  "rule": "repeated",
+                  "type": "int32",
+                  "id": 1
+                }
+              }
+            },
+            "ClearNewUnlockedFruitsV2Reply": {
+              "fields": {
+                "cleared_fruit_ids": {
+                  "rule": "repeated",
+                  "type": "int32",
+                  "id": 1
+                }
+              }
+            },
+            "IllustratedChangeNotifyV2": {
+              "fields": {
+                "unlocked_fruits": {
+                  "rule": "repeated",
+                  "type": "UnlockedFruitInfo",
+                  "id": 1
+                },
+                "old_level": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "new_level": {
+                  "type": "int32",
+                  "id": 3
+                },
+                "type": {
+                  "type": "int32",
+                  "id": 4
+                },
+                "old_progress": {
+                  "type": "int32",
+                  "id": 5
+                },
+                "current_progress": {
+                  "type": "int32",
+                  "id": 6
+                }
+              }
+            },
+            "IllustratedRewardRedDotNotifyV2": {
+              "fields": {
+                "normal_reward_available": {
+                  "type": "bool",
+                  "id": 1
+                },
+                "premium_reward_available": {
+                  "type": "bool",
+                  "id": 2
+                }
+              }
+            }
+          }
+        },
+        "weatherpb": {
+          "nested": {
+            "WeatherSlot": {
+              "fields": {
+                "start_time": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "end_time": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "weather": {
+                  "type": "int64",
+                  "id": 3
+                },
+                "is_current": {
+                  "type": "bool",
+                  "id": 4
+                }
+              }
+            },
+            "GetTodayWeatherRequest": {
+              "fields": {}
+            },
+            "GetTodayWeatherReply": {
+              "fields": {
+                "today_weathers": {
+                  "rule": "repeated",
+                  "type": "WeatherSlot",
+                  "id": 1
+                }
+              }
+            },
+            "GetCurrentWeatherRequest": {
+              "fields": {}
+            },
+            "GetCurrentWeatherReply": {
+              "fields": {
+                "current_weather": {
+                  "type": "WeatherSlot",
                   "id": 1
                 }
               }

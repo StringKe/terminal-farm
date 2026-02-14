@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package gamepb.emailpb;
+
+import "corepb.proto";
+
+// ============ 邮件类型 ============
+enum EmailType {
+    EMAIL_TYPE_UNKNOWN = 0;
+    EMAIL_TYPE_SYSTEM = 1;   // 系统邮件
+    EMAIL_TYPE_PLAYER = 2;   // 玩家邮件
+}
+
+// ============ 邮件预览 ============
+message EmailPreview {
+    string email_id = 1;
+    int32 email_type = 2;       // EmailType
+    string title = 3;
+    bool is_read = 4;
+    bool has_reward = 5;
+    int64 send_time = 6;
+    string desc = 7;
+    int64 expire_time = 8;
+    string tips = 9;
+}
+
+// ============ 邮件详情 ============
+message EmailDetail {
+    string email_id = 1;
+    int32 email_type = 2;       // EmailType
+    string title = 3;
+    string content = 4;
+    repeated corepb.Item rewards = 5;
+    int64 send_time = 6;
+    int64 expire_time = 7;
+    bool is_read = 8;
+    string reason = 9;
+    bool is_claimed = 10;
+    string tips = 11;
+}
+
+// ============ 请求/回复 ============
+
+// --- 获取邮件列表 ---
+message GetEmailListRequest {
+    int32 email_type = 1;
+}
+
+message GetEmailListReply {
+    repeated EmailPreview emails = 1;
+}
+
+// --- 读取邮件 ---
+message ReadEmailRequest {
+    int32 email_type = 1;
+    string email_id = 2;
+}
+
+message ReadEmailReply {
+    EmailDetail email = 1;
+}
+
+// --- 批量已读 ---
+message BatchReadEmailRequest {
+    int32 email_type = 1;
+    repeated string email_ids = 2;
+}
+
+message BatchReadEmailReply {}
+
+// --- 领取邮件奖励 ---
+message ClaimEmailRequest {
+    int32 email_type = 1;
+    string email_id = 2;
+}
+
+message ClaimEmailReply {
+    repeated corepb.Item rewards = 1;
+}
+
+// --- 批量领取邮件奖励 ---
+message BatchClaimEmailRequest {
+    int32 email_type = 1;
+    repeated string email_ids = 2;
+}
+
+message BatchClaimEmailReply {
+    repeated corepb.Item rewards = 1;
+    repeated string unclaimed_email_ids = 2;
+}
+
+// --- 批量删除邮件 ---
+message BatchDeleteEmailRequest {
+    int32 email_type = 1;
+    repeated string email_ids = 2;
+}
+
+message BatchDeleteEmailReply {
+    repeated string undeleted_email_ids = 1;
+}
+
+// ============ 服务器推送 ============
+
+message NewEmailNotify {
+    repeated EmailPreview new_emails = 1;
+}

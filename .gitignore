@@ -16,3 +16,6 @@ tools/*.json
 tools/*.csv
 tools/*.txt
 !tools/calc-exp-yield.ts
+
+# 本地测试/分析文件
+local/
