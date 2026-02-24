@@ -6,17 +6,15 @@ import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
 import { getDateKey } from '../utils/format.js'
 import type { ScopedLogger } from '../utils/logger.js'
-import { sleep } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
+import { jitteredSleep, shuffleArray } from '../utils/random.js'
 import type { FarmManager } from './farm.js'
+import type { TaskScheduler } from './scheduler.js'
 
 const HELP_ONLY_WITH_EXP = true
 
 export class FriendManager {
   private isChecking = false
-  private loopRunning = false
-  private loopTimer: ReturnType<typeof setTimeout> | null = null
-  private acceptTimer: ReturnType<typeof setTimeout> | null = null
   private lastResetDate = ''
   private expTracker = new Map<number, number>()
   private expExhausted = new Set<number>()
@@ -31,6 +29,7 @@ export class FriendManager {
     private farm: FarmManager,
     private getAccountConfig: () => AccountConfig,
     private logger: ScopedLogger,
+    private scheduler: TaskScheduler,
   ) {}
 
   private checkDailyReset(): void {
@@ -159,6 +158,7 @@ export class FriendManager {
 
   private async putWeeds(gid: number, landIds: number[]): Promise<number> {
     let ok = 0
+    const jitter = this.scheduler.jitterRatio
     for (const landId of landIds) {
       try {
         const body = types.PutWeedsRequest.encode(
@@ -169,13 +169,14 @@ export class FriendManager {
         this.updateOperationLimits(reply.operation_limits)
         ok++
       } catch {}
-      await sleep(100)
+      await jitteredSleep(100, jitter)
     }
     return ok
   }
 
   private async putInsects(gid: number, landIds: number[]): Promise<number> {
     let ok = 0
+    const jitter = this.scheduler.jitterRatio
     for (const landId of landIds) {
       try {
         const body = types.PutInsectsRequest.encode(
@@ -186,7 +187,7 @@ export class FriendManager {
         this.updateOperationLimits(reply.operation_limits)
         ok++
       } catch {}
-      await sleep(100)
+      await jitteredSleep(100, jitter)
     }
     return ok
   }
@@ -249,6 +250,7 @@ export class FriendManager {
     }
     const status = this.analyzeFriendLands(lands, this.conn.userState.gid)
     const actions: string[] = []
+    const jitter = this.scheduler.jitterRatio
     // Help operations
     for (const [opId, landIds, helpFn, label] of [
       [10005, status.needWeed, (gid: number, ids: number[]) => this.helpWeed(gid, ids), '草'] as const,
@@ -263,7 +265,7 @@ export class FriendManager {
             await helpFn(friend.gid, [landId])
             ok++
           } catch {}
-          await sleep(100)
+          await jitteredSleep(100, jitter)
         }
         if (ok > 0) {
           actions.push(`${label}${ok}`)
@@ -281,7 +283,7 @@ export class FriendManager {
           ok++
           if (status.stealableInfo[i]) stolenPlants.push(status.stealableInfo[i].name)
         } catch {}
-        await sleep(100)
+        await jitteredSleep(100, jitter)
       }
       if (ok > 0) {
         const plantNames = [...new Set(stolenPlants)].join('/')
@@ -359,14 +361,16 @@ export class FriendManager {
       this.store.updateFriendList(dedupedFriends, friends.length)
 
       if (!friendsToVisit.length) return
-      this.store.updateFriendPatrol(0, friendsToVisit.length)
+      const jitter = this.scheduler.jitterRatio
+      const ordered = jitter > 0 ? shuffleArray(friendsToVisit) : friendsToVisit
+      this.store.updateFriendPatrol(0, ordered.length)
       const totalActions: Record<string, number> = {}
-      for (let i = 0; i < friendsToVisit.length; i++) {
+      for (let i = 0; i < ordered.length; i++) {
         try {
-          await this.visitFriend(friendsToVisit[i], totalActions)
+          await this.visitFriend(ordered[i], totalActions)
         } catch {}
-        this.store.updateFriendPatrol(i + 1, friendsToVisit.length)
-        await sleep(500)
+        this.store.updateFriendPatrol(i + 1, ordered.length)
+        await jitteredSleep(500, jitter)
       }
       const summary: string[] = []
       if (totalActions.steal) summary.push(`偷${totalActions.steal}`)
@@ -435,36 +439,21 @@ export class FriendManager {
     }
   }
 
-  start(): void {
-    if (this.loopRunning) return
-    this.loopRunning = true
+  registerTasks(): void {
     this.farm.setOperationLimitsCallback((limits) => this.updateOperationLimits(limits))
+    this.scheduler.every('friend-check', () => this.checkFriends(), {
+      intervalMs: config.friendCheckInterval,
+      startDelayMs: 5000,
+      name: '巡查好友',
+    })
+    this.scheduler.once('friend-accept', () => this.checkAndAcceptApplications(), {
+      delayMs: 3000,
+      name: '接受好友',
+    })
     this.conn.on('friendApplicationReceived', this.onFriendApplicationReceived)
-    this.loopTimer = setTimeout(() => this.loop(), 5000)
-    this.acceptTimer = setTimeout(() => {
-      this.acceptTimer = null
-      this.checkAndAcceptApplications()
-    }, 3000)
   }
 
-  private async loop(): Promise<void> {
-    while (this.loopRunning) {
-      await this.checkFriends()
-      if (!this.loopRunning) break
-      await sleep(config.friendCheckInterval)
-    }
-  }
-
-  stop(): void {
-    this.loopRunning = false
+  unregisterListeners(): void {
     this.conn.off('friendApplicationReceived', this.onFriendApplicationReceived)
-    if (this.loopTimer) {
-      clearTimeout(this.loopTimer)
-      this.loopTimer = null
-    }
-    if (this.acceptTimer) {
-      clearTimeout(this.acceptTimer)
-      this.acceptTimer = null
-    }
   }
 }

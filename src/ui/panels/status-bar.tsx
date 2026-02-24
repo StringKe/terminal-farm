@@ -1,15 +1,17 @@
 import { Box, Text } from 'ink'
 import { getLevelExpProgress } from '../../config/game-data.js'
 import type { UserState } from '../../protocol/types.js'
+import type { SchedulerStatusInfo } from '../../store/session-store.js'
 import { ProgressBar } from '../components/progress-bar.js'
 
 interface StatusBarProps {
   user: UserState
   platform: 'qq' | 'wx'
   apiPort?: number
+  schedulerStatus?: SchedulerStatusInfo | null
 }
 
-export function StatusBar({ user, platform, apiPort }: StatusBarProps) {
+export function StatusBar({ user, platform, apiPort, schedulerStatus }: StatusBarProps) {
   const progress = getLevelExpProgress(user.level, user.exp)
 
   return (
@@ -31,7 +33,14 @@ export function StatusBar({ user, platform, apiPort }: StatusBarProps) {
           </Text>
         </Box>
       </Box>
-      {apiPort ? <Text dimColor>API :{apiPort}</Text> : null}
+      <Box gap={1}>
+        {schedulerStatus?.resting ? (
+          <Text color="yellow">[休息 {schedulerStatus.restSecondsLeft}s]</Text>
+        ) : schedulerStatus ? (
+          <Text dimColor>[拟人]</Text>
+        ) : null}
+        {apiPort ? <Text dimColor>API :{apiPort}</Text> : null}
+      </Box>
     </Box>
   )
 }

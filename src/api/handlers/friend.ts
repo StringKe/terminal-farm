@@ -24,7 +24,7 @@ export async function handleFriendPatrol(body: any): Promise<Response> {
   if (!session) return Response.json({ ok: false, error: '账号未找到' }, { status: 404 })
 
   try {
-    session.friend.start()
+    session.scheduler.trigger('friend-check', 0)
     return Response.json({ ok: true })
   } catch (e: any) {
     return Response.json({ ok: false, error: e.message }, { status: 500 })

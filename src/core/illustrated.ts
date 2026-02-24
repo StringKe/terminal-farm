@@ -3,13 +3,13 @@ import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { ScopedLogger } from '../utils/logger.js'
 import { toNum } from '../utils/long.js'
+import type { TaskScheduler } from './scheduler.js'
 
 export class IllustratedManager {
-  private initTimer: ReturnType<typeof setTimeout> | null = null
-
   constructor(
     private conn: Connection,
     private logger: ScopedLogger,
+    private scheduler: TaskScheduler,
   ) {}
 
   async checkAndClaimRewards(): Promise<void> {
@@ -64,22 +64,16 @@ export class IllustratedManager {
 
   private onRewardRedDot = (): void => {
     this.logger.log('图鉴', '收到红点推送，检查可领取奖励...')
-    setTimeout(() => this.checkAndClaimRewards(), 500)
+    this.scheduler.trigger('illustrated-check', 500)
   }
 
-  start(): void {
+  registerTasks(): void {
+    // 长间隔周期任务，主要靠推送 trigger 触发
+    this.scheduler.every('illustrated-check', () => this.checkAndClaimRewards(), {
+      intervalMs: 3600_000,
+      startDelayMs: 6000,
+      name: '图鉴奖励',
+    })
     this.conn.on('illustratedRewardRedDot', this.onRewardRedDot)
-    this.initTimer = setTimeout(() => {
-      this.initTimer = null
-      this.checkAndClaimRewards()
-    }, 6000)
-  }
-
-  stop(): void {
-    this.conn.off('illustratedRewardRedDot', this.onRewardRedDot)
-    if (this.initTimer) {
-      clearTimeout(this.initTimer)
-      this.initTimer = null
-    }
   }
 }

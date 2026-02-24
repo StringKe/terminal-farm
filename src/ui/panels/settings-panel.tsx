@@ -27,6 +27,8 @@ const SETTINGS: SettingItem[] = [
   { key: 'enablePutBadThings', label: '放虫放草', type: 'boolean' },
   { key: 'autoClaimFreeGifts', label: '自动领礼包', type: 'boolean' },
   { key: 'autoUseGiftPacks', label: '自动开礼包', type: 'boolean' },
+  { key: 'enableHumanMode', label: '拟人模式', type: 'boolean' },
+  { key: 'humanModeIntensity', label: '拟人强度', type: 'enum', enumValues: ['low', 'medium', 'high'] },
 ]
 
 interface SettingsPanelProps {
@@ -35,13 +37,19 @@ interface SettingsPanelProps {
   onClose: () => void
 }
 
+const ENUM_LABELS: Record<string, string> = {
+  levelup: '升级时',
+  always: '始终',
+  low: '低',
+  medium: '中',
+  high: '高',
+}
+
 function formatValue(item: SettingItem, value: unknown): string {
   if (item.type === 'boolean') return value ? 'ON' : 'OFF'
   if (item.type === 'enum') {
     if (value === false) return '关闭'
-    if (value === 'levelup') return '升级时'
-    if (value === 'always') return '始终'
-    return String(value)
+    return ENUM_LABELS[String(value)] ?? String(value)
   }
   return String(value)
 }

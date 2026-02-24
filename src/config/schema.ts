@@ -33,6 +33,8 @@ export const accountConfigSchema = z.object({
   enablePutBadThings: z.boolean().default(false),
   autoClaimFreeGifts: z.boolean().default(true),
   autoUseGiftPacks: z.boolean().default(true),
+  enableHumanMode: z.boolean().default(true),
+  humanModeIntensity: z.enum(['low', 'medium', 'high']).default('medium'),
 })
 
 export type DeviceInfo = z.infer<typeof deviceInfoSchema>

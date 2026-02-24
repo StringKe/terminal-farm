@@ -56,7 +56,8 @@ src/main.ts (入口，CLI 参数解析)
   → app.tsx (Ink 根组件，路由 login/dashboard)
     → ui/ (screens, panels, hooks, components)
   → core/ (业务逻辑，纯 TS)
-    → session.ts (单账号编排: Connection + Store + Managers)
+    → session.ts (单账号编排: Connection + Store + Scheduler + Managers)
+    → scheduler.ts (统一任务调度: 串行化 + 抖动 + 休息)
     → account.ts (多账号管理)
     → farm.ts / friend.ts / task.ts / warehouse.ts
   → protocol/ (协议层)
@@ -82,7 +83,9 @@ src/main.ts (入口，CLI 参数解析)
 - **协议驱动**：所有通信通过 `proto/` 定义的 Protobuf 消息，gatepb 为网关包装层
 - **消息类型**：请求=1，响应=2，推送通知=3
 - **Connection 实例化**：每个账号独立 WebSocket 连接（非全局单例）
-- **循环调度**：farm/friend/warehouse 各自独立 setInterval 循环
+- **统一调度器**：所有 Manager 通过 `TaskScheduler` 注册任务（`every`/`once`/`trigger`），调度器统一管理执行顺序、抖动和休息
+- **拟人模式**：调度器内置操作间隔抖动（jitter）、任务随机排序、定期休息，三档强度可配置
+- **心跳不经调度器**：心跳由 Connection 自行管理（独立 setInterval），保证实时性
 - **登录码持久化**：QQ 平台成功登录后保存至 `data/code.json`
 
 ### 运行时数据目录

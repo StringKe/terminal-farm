@@ -124,6 +124,7 @@ export function Dashboard({
       user={state.user}
       platform={currentAccount.platform}
       apiPort={config.apiEnabled ? config.apiPort : undefined}
+      schedulerStatus={state.schedulerStatus}
     />
   )
 

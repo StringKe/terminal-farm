@@ -4,27 +4,22 @@ import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { ScopedLogger } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
+import type { TaskScheduler } from './scheduler.js'
 
 export class ShopManager {
-  private timer: ReturnType<typeof setInterval> | null = null
-
   constructor(
     private conn: Connection,
     private getAccountConfig: () => AccountConfig,
     private logger: ScopedLogger,
+    private scheduler: TaskScheduler,
   ) {}
 
-  start(): void {
-    if (this.timer) return
-    setTimeout(() => this.checkFreeGifts(), 8000)
-    this.timer = setInterval(() => this.checkFreeGifts(), 60 * 60 * 1000)
-  }
-
-  stop(): void {
-    if (this.timer) {
-      clearInterval(this.timer)
-      this.timer = null
-    }
+  registerTasks(): void {
+    this.scheduler.every('shop-gift', () => this.checkFreeGifts(), {
+      intervalMs: 3600_000,
+      startDelayMs: 8000,
+      name: '免费礼包',
+    })
   }
 
   private async checkFreeGifts(): Promise<void> {

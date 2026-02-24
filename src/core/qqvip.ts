@@ -3,13 +3,13 @@ import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { ScopedLogger } from '../utils/logger.js'
 import { toNum } from '../utils/long.js'
+import type { TaskScheduler } from './scheduler.js'
 
 export class QQVipManager {
-  private initTimer: ReturnType<typeof setTimeout> | null = null
-
   constructor(
     private conn: Connection,
     private logger: ScopedLogger,
+    private scheduler: TaskScheduler,
   ) {}
 
   async checkAndClaim(): Promise<void> {
@@ -56,22 +56,15 @@ export class QQVipManager {
 
   private onGiftStatusChanged = (): void => {
     this.logger.log('会员', '收到礼包状态推送，检查可领取...')
-    setTimeout(() => this.checkAndClaim(), 500)
+    this.scheduler.trigger('qqvip-check', 500)
   }
 
-  start(): void {
+  registerTasks(): void {
+    this.scheduler.every('qqvip-check', () => this.checkAndClaim(), {
+      intervalMs: 3600_000,
+      startDelayMs: 5000,
+      name: 'QQ会员礼包',
+    })
     this.conn.on('dailyGiftStatusChanged', this.onGiftStatusChanged)
-    this.initTimer = setTimeout(() => {
-      this.initTimer = null
-      this.checkAndClaim()
-    }, 5000)
-  }
-
-  stop(): void {
-    this.conn.off('dailyGiftStatusChanged', this.onGiftStatusChanged)
-    if (this.initTimer) {
-      clearTimeout(this.initTimer)
-      this.initTimer = null
-    }
   }
 }

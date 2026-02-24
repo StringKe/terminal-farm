@@ -9,6 +9,7 @@ import { FriendManager } from './friend.js'
 import { IllustratedManager } from './illustrated.js'
 import { processInviteCodes } from './invite.js'
 import { QQVipManager } from './qqvip.js'
+import { TaskScheduler } from './scheduler.js'
 import { ShopManager } from './shop.js'
 import { TaskManager } from './task.js'
 import { WarehouseManager } from './warehouse.js'
@@ -21,6 +22,7 @@ export interface SessionOptions {
 export class Session {
   readonly conn: Connection
   readonly store: SessionStore
+  readonly scheduler: TaskScheduler
   readonly farm: FarmManager
   readonly friend: FriendManager
   readonly task: TaskManager
@@ -52,15 +54,16 @@ export class Session {
     const logger = this.logger
     this.conn = new Connection(config, logger)
     this.store = new SessionStore()
-    this.farm = new FarmManager(this.conn, this.store, getAccountConfig, logger)
-    this.friend = new FriendManager(this.conn, this.store, this.farm, getAccountConfig, logger)
-    this.task = new TaskManager(this.conn, this.store, logger)
-    this.warehouse = new WarehouseManager(this.conn, this.store, getAccountConfig, logger)
-    this.illustrated = new IllustratedManager(this.conn, logger)
-    this.email = new EmailManager(this.conn, logger)
-    this.weather = new WeatherManager(this.conn, this.store, logger)
-    this.qqvip = new QQVipManager(this.conn, logger)
-    this.shop = new ShopManager(this.conn, getAccountConfig, logger)
+    this.scheduler = new TaskScheduler(config, getAccountConfig, this.store, logger)
+    this.farm = new FarmManager(this.conn, this.store, getAccountConfig, logger, this.scheduler)
+    this.friend = new FriendManager(this.conn, this.store, this.farm, getAccountConfig, logger, this.scheduler)
+    this.task = new TaskManager(this.conn, this.store, logger, this.scheduler)
+    this.warehouse = new WarehouseManager(this.conn, this.store, getAccountConfig, logger, this.scheduler)
+    this.illustrated = new IllustratedManager(this.conn, logger, this.scheduler)
+    this.email = new EmailManager(this.conn, logger, this.scheduler)
+    this.weather = new WeatherManager(this.conn, this.store, logger, this.scheduler)
+    this.qqvip = new QQVipManager(this.conn, logger, this.scheduler)
+    this.shop = new ShopManager(this.conn, getAccountConfig, logger, this.scheduler)
 
     // Forward connection events to store
     this.conn.on('login', (state) => this.store.updateUser(state))
@@ -135,27 +138,23 @@ export class Session {
   }
 
   private startManagers(): void {
-    this.farm.start()
-    this.friend.start()
-    this.task.start()
-    this.warehouse.start()
-    this.illustrated.start()
-    this.email.start()
-    this.weather.start()
-    this.qqvip.start()
-    this.shop.start()
+    this.farm.registerTasks()
+    this.friend.registerTasks()
+    this.task.registerTasks()
+    this.warehouse.registerTasks()
+    this.illustrated.registerTasks()
+    this.email.registerTasks()
+    this.weather.registerTasks()
+    this.qqvip.registerTasks()
+    this.shop.registerTasks()
+    this.scheduler.start()
   }
 
   private stopManagers(): void {
-    this.farm.stop()
-    this.friend.stop()
-    this.task.stop()
-    this.warehouse.stop()
-    this.illustrated.stop()
-    this.email.stop()
-    this.weather.stop()
-    this.qqvip.stop()
-    this.shop.stop()
+    this.scheduler.stop()
+    this.farm.unregisterListeners()
+    this.friend.unregisterListeners()
+    this.task.unregisterListeners()
   }
 
   private async attemptReconnect(): Promise<void> {

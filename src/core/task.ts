@@ -3,17 +3,16 @@ import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
 import type { ScopedLogger } from '../utils/logger.js'
-import { sleep } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
+import { jitteredSleep } from '../utils/random.js'
+import type { TaskScheduler } from './scheduler.js'
 
 export class TaskManager {
-  private initTimer: ReturnType<typeof setTimeout> | null = null
-  private claimTimer: ReturnType<typeof setTimeout> | null = null
-
   constructor(
     private conn: Connection,
     private store: SessionStore,
     private logger: ScopedLogger,
+    private scheduler: TaskScheduler,
   ) {}
 
   async getTaskInfo(): Promise<any> {
@@ -122,7 +121,7 @@ export class TaskManager {
         const items = claimReply.items || []
         const rewardStr = items.length > 0 ? this.getRewardSummary(items) : '无'
         this.logger.log('任务', `领取: ${task.desc}${multipleStr} → ${rewardStr}`)
-        await sleep(300)
+        await jitteredSleep(300, this.scheduler.jitterRatio)
       } catch (e: any) {
         this.logger.logWarn('任务', `领取失败 #${task.id}: ${e.message}`)
       }
@@ -153,30 +152,24 @@ export class TaskManager {
     if (!hasClaimable && !actives.length) return
     if (hasClaimable) this.logger.log('任务', `有 ${claimable.length} 个任务可领取，准备自动领取...`)
 
-    this.claimTimer = setTimeout(async () => {
-      this.claimTimer = null
-      if (hasClaimable) await this.claimTasksFromList(claimable)
-      await this.checkAndClaimActives(actives)
-    }, 1000)
+    this.scheduler.trigger('task-claim', 1000)
   }
 
-  start(): void {
+  registerTasks(): void {
+    this.scheduler.once('task-init', () => this.checkAndClaimTasks(), {
+      delayMs: 4000,
+      name: '任务初始化',
+    })
+    // task-claim 用于推送触发的领取（trigger 提前调度）
+    this.scheduler.every('task-claim', () => this.checkAndClaimTasks(), {
+      intervalMs: 300_000,
+      startDelayMs: 300_000,
+      name: '任务领取',
+    })
     this.conn.on('taskInfoNotify', this.onTaskInfoNotify)
-    this.initTimer = setTimeout(() => {
-      this.initTimer = null
-      this.checkAndClaimTasks()
-    }, 4000)
   }
 
-  stop(): void {
+  unregisterListeners(): void {
     this.conn.off('taskInfoNotify', this.onTaskInfoNotify)
-    if (this.initTimer) {
-      clearTimeout(this.initTimer)
-      this.initTimer = null
-    }
-    if (this.claimTimer) {
-      clearTimeout(this.claimTimer)
-      this.claimTimer = null
-    }
   }
 }

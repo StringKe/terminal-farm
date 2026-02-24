@@ -25,6 +25,14 @@ export interface WeatherInfo {
   slots: any[]
 }
 
+export interface SchedulerStatusInfo {
+  resting: boolean
+  restSecondsLeft: number
+  intensity: 'low' | 'medium' | 'high'
+  taskCount: number
+  currentTask: string | null
+}
+
 export interface SessionState {
   user: UserState
   lands: any[]
@@ -39,6 +47,7 @@ export interface SessionState {
   taskList: TaskInfo[]
   operationLimits: Map<number, OperationLimit>
   weather: WeatherInfo | null
+  schedulerStatus: SchedulerStatusInfo | null
 }
 
 export class SessionStore extends EventEmitter {
@@ -56,6 +65,7 @@ export class SessionStore extends EventEmitter {
     taskList: [],
     operationLimits: new Map(),
     weather: null,
+    schedulerStatus: null,
   }
 
   updateUser(user: Partial<UserState>): void {
@@ -145,5 +155,10 @@ export class SessionStore extends EventEmitter {
   updateOperationLimit(limit: OperationLimit): void {
     this.state.operationLimits.set(limit.id, limit)
     this.emit('change', 'operationLimits')
+  }
+
+  updateSchedulerStatus(status: SchedulerStatusInfo): void {
+    this.state.schedulerStatus = status
+    this.emit('change', 'schedulerStatus')
   }
 }

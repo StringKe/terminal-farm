@@ -3,15 +3,15 @@ import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { ScopedLogger } from '../utils/logger.js'
 import { toNum } from '../utils/long.js'
+import type { TaskScheduler } from './scheduler.js'
 
 const EMAIL_TYPE_SYSTEM = 1
 
 export class EmailManager {
-  private initTimer: ReturnType<typeof setTimeout> | null = null
-
   constructor(
     private conn: Connection,
     private logger: ScopedLogger,
+    private scheduler: TaskScheduler,
   ) {}
 
   async checkAndClaimEmails(): Promise<void> {
@@ -66,22 +66,15 @@ export class EmailManager {
 
   private onNewEmail = (): void => {
     this.logger.log('邮件', '收到新邮件推送，检查可领取奖励...')
-    setTimeout(() => this.checkAndClaimEmails(), 1000)
+    this.scheduler.trigger('email-check', 1000)
   }
 
-  start(): void {
+  registerTasks(): void {
+    this.scheduler.every('email-check', () => this.checkAndClaimEmails(), {
+      intervalMs: 3600_000,
+      startDelayMs: 8000,
+      name: '邮件领取',
+    })
     this.conn.on('newEmailNotify', this.onNewEmail)
-    this.initTimer = setTimeout(() => {
-      this.initTimer = null
-      this.checkAndClaimEmails()
-    }, 8000)
-  }
-
-  stop(): void {
-    this.conn.off('newEmailNotify', this.onNewEmail)
-    if (this.initTimer) {
-      clearTimeout(this.initTimer)
-      this.initTimer = null
-    }
   }
 }

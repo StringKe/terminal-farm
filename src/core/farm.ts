@@ -15,8 +15,8 @@ import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
 import type { ScopedLogger } from '../utils/logger.js'
-import { sleep } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
+import { jitteredSleep, shuffleArray } from '../utils/random.js'
 import { getServerTimeSec, toTimeSec } from '../utils/time.js'
 import {
   type OperationTiming,
@@ -25,6 +25,7 @@ import {
   getPlantingRecommendation,
 } from './exp-calculator.js'
 import type { LandDistribution } from './exp-calculator.js'
+import type { TaskScheduler } from './scheduler.js'
 
 export type OperationLimitsCallback = (limits: any[]) => void
 
@@ -32,9 +33,6 @@ export class FarmManager {
   private isChecking = false
   private isFirstCheck = true
   private isFirstReplantLog = true
-  private loopRunning = false
-  private loopTimer: ReturnType<typeof setTimeout> | null = null
-  private lastPushTime = 0
   private onOperationLimitsUpdate: OperationLimitsCallback | null = null
 
   constructor(
@@ -42,6 +40,7 @@ export class FarmManager {
     private store: SessionStore,
     private getAccountConfig: () => AccountConfig,
     private logger: ScopedLogger,
+    private scheduler: TaskScheduler,
   ) {}
 
   setOperationLimitsCallback(cb: OperationLimitsCallback): void {
@@ -130,7 +129,7 @@ export class FarmManager {
       } catch {
         continue
       }
-      if (landIds.length > 1) await sleep(50)
+      if (landIds.length > 1) await jitteredSleep(80, this.scheduler.jitterRatio)
     }
     if (lastCount >= 0 && lastCount <= 100) {
       const cfg = this.getAccountConfig()
@@ -215,7 +214,7 @@ export class FarmManager {
       } catch (e: any) {
         this.logger.logWarn('种植', `土地#${landId} 失败: ${e.message}`)
       }
-      if (landIds.length > 1) await sleep(50)
+      if (landIds.length > 1) await jitteredSleep(80, this.scheduler.jitterRatio)
     }
     return successCount
   }
@@ -505,32 +504,35 @@ export class FarmManager {
         status.dead.length ||
         status.empty.length
       const actions: string[] = []
-      const batchOps: Promise<void>[] = []
-      if (status.needWeed.length > 0)
-        batchOps.push(
-          this.weedOut(status.needWeed)
-            .then(() => {
-              actions.push(`除草${status.needWeed.length}`)
-            })
-            .catch((e) => this.logger.logWarn('除草', e.message)),
-        )
-      if (status.needBug.length > 0)
-        batchOps.push(
-          this.insecticide(status.needBug)
-            .then(() => {
-              actions.push(`除虫${status.needBug.length}`)
-            })
-            .catch((e) => this.logger.logWarn('除虫', e.message)),
-        )
-      if (status.needWater.length > 0)
-        batchOps.push(
-          this.waterLand(status.needWater)
-            .then(() => {
-              actions.push(`浇水${status.needWater.length}`)
-            })
-            .catch((e) => this.logger.logWarn('浇水', e.message)),
-        )
-      if (batchOps.length > 0) await Promise.all(batchOps)
+      const jitter = this.scheduler.jitterRatio
+      const ops = [
+        status.needWeed.length > 0 && {
+          fn: () => this.weedOut(status.needWeed),
+          label: `除草${status.needWeed.length}`,
+          warn: '除草',
+        },
+        status.needBug.length > 0 && {
+          fn: () => this.insecticide(status.needBug),
+          label: `除虫${status.needBug.length}`,
+          warn: '除虫',
+        },
+        status.needWater.length > 0 && {
+          fn: () => this.waterLand(status.needWater),
+          label: `浇水${status.needWater.length}`,
+          warn: '浇水',
+        },
+      ].filter(Boolean) as { fn: () => Promise<any>; label: string; warn: string }[]
+
+      const ordered = jitter > 0 ? shuffleArray(ops) : ops
+      for (const op of ordered) {
+        try {
+          await op.fn()
+          actions.push(op.label)
+        } catch (e: any) {
+          this.logger.logWarn(op.warn, e.message)
+        }
+        if (jitter > 0 && ordered.length > 1) await jitteredSleep(200, jitter)
+      }
       let harvestedLandIds: number[] = []
       if (status.harvestable.length > 0) {
         try {
@@ -714,7 +716,7 @@ export class FarmManager {
         const reply = (await this.unlockLand(landId)) as any
         const newLevel = reply.land ? toNum(reply.land.level) : '?'
         this.logger.log('解锁', `土地#${landId} 解锁成功 (等级${newLevel})`)
-        await sleep(200)
+        await jitteredSleep(300, this.scheduler.jitterRatio)
       } catch (e: any) {
         this.logger.logWarn('解锁', `土地#${landId} 解锁失败: ${e.message}`)
       }
@@ -736,7 +738,7 @@ export class FarmManager {
         const reply = (await this.upgradeLand(landId)) as any
         const newLevel = reply.land ? toNum(reply.land.level) : '?'
         this.logger.log('升级', `土地#${landId} 升级成功 → 等级${newLevel}`)
-        await sleep(200)
+        await jitteredSleep(300, this.scheduler.jitterRatio)
       } catch (e: any) {
         this.logger.logWarn('升级', `土地#${landId} 升级失败: ${e.message}`)
       }
@@ -744,14 +746,8 @@ export class FarmManager {
   }
 
   private onLandsChangedPush = (): void => {
-    if (this.isChecking) return
-    const now = Date.now()
-    if (now - this.lastPushTime < 500) return
-    this.lastPushTime = now
-    this.logger.log('农场', '收到推送: 土地变化，检查中...')
-    setTimeout(() => {
-      if (!this.isChecking) this.checkFarm()
-    }, 100)
+    this.logger.log('农场', '收到推送: 土地变化')
+    this.scheduler.trigger('farm-check', 500)
   }
 
   private onLevelUpReplant = async ({ oldLevel, newLevel }: { oldLevel: number; newLevel: number }): Promise<void> => {
@@ -788,28 +784,19 @@ export class FarmManager {
     }
   }
 
-  start(): void {
-    if (this.loopRunning) return
-    this.loopRunning = true
+  registerTasks(): void {
+    this.scheduler.every('farm-check', () => this.checkFarm(), {
+      intervalMs: config.farmCheckInterval,
+      startDelayMs: 2000,
+      name: '巡田',
+    })
     this.conn.on('landsChanged', this.onLandsChangedPush)
-    if (this.getAccountConfig().autoReplantMode === 'levelup') this.conn.on('levelUp', this.onLevelUpReplant)
-    this.loopTimer = setTimeout(() => this.loop(), 2000)
-  }
-
-  private async loop(): Promise<void> {
-    while (this.loopRunning) {
-      await this.checkFarm()
-      if (!this.loopRunning) break
-      await sleep(config.farmCheckInterval)
+    if (this.getAccountConfig().autoReplantMode === 'levelup') {
+      this.conn.on('levelUp', this.onLevelUpReplant)
     }
   }
 
-  stop(): void {
-    this.loopRunning = false
-    if (this.loopTimer) {
-      clearTimeout(this.loopTimer)
-      this.loopTimer = null
-    }
+  unregisterListeners(): void {
     this.conn.removeListener('landsChanged', this.onLandsChangedPush)
     this.conn.removeListener('levelUp', this.onLevelUpReplant)
   }

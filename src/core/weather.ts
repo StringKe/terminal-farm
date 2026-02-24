@@ -3,6 +3,7 @@ import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
 import type { ScopedLogger } from '../utils/logger.js'
 import { toNum } from '../utils/long.js'
+import type { TaskScheduler } from './scheduler.js'
 
 const WEATHER_NAMES: Record<number, string> = {
   0: '未知',
@@ -23,13 +24,11 @@ export function getWeatherName(id: number): string {
 }
 
 export class WeatherManager {
-  private initTimer: ReturnType<typeof setTimeout> | null = null
-  private refreshTimer: ReturnType<typeof setInterval> | null = null
-
   constructor(
     private conn: Connection,
     private store: SessionStore,
     private logger: ScopedLogger,
+    private scheduler: TaskScheduler,
   ) {}
 
   async fetchTodayWeather(): Promise<void> {
@@ -64,24 +63,11 @@ export class WeatherManager {
     }
   }
 
-  start(): void {
-    this.initTimer = setTimeout(() => {
-      this.initTimer = null
-      this.fetchTodayWeather()
-    }, 3000)
-
-    // 每30分钟刷新一次天气
-    this.refreshTimer = setInterval(() => this.fetchTodayWeather(), 30 * 60 * 1000)
-  }
-
-  stop(): void {
-    if (this.initTimer) {
-      clearTimeout(this.initTimer)
-      this.initTimer = null
-    }
-    if (this.refreshTimer) {
-      clearInterval(this.refreshTimer)
-      this.refreshTimer = null
-    }
+  registerTasks(): void {
+    this.scheduler.every('weather-fetch', () => this.fetchTodayWeather(), {
+      intervalMs: 30 * 60_000,
+      startDelayMs: 3000,
+      name: '天气刷新',
+    })
   }
 }

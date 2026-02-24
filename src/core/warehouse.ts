@@ -7,6 +7,8 @@ import type { SessionStore } from '../store/session-store.js'
 import type { ScopedLogger } from '../utils/logger.js'
 import { emitRuntimeHint } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
+import { jitteredSleep } from '../utils/random.js'
+import type { TaskScheduler } from './scheduler.js'
 
 let FRUIT_ID_SET: Set<number> | null = null
 
@@ -20,14 +22,12 @@ const NORMAL_FERT_IDS = new Set(FERTILIZER_REFILL_ITEMS[1011])
 const ORGANIC_FERT_IDS = new Set(FERTILIZER_REFILL_ITEMS[1012])
 
 export class WarehouseManager {
-  private initTimer: ReturnType<typeof setTimeout> | null = null
-  private sellTimer: ReturnType<typeof setInterval> | null = null
-
   constructor(
     private conn: Connection,
     private store: SessionStore,
     private getAccountConfig: () => AccountConfig,
     private logger: ScopedLogger,
+    private scheduler: TaskScheduler,
   ) {
     loadFruitIds()
   }
@@ -114,6 +114,7 @@ export class WarehouseManager {
 
   private async autoUseItems(items: any[]): Promise<void> {
     const usableIds = getAutoUsableItemIds()
+    const jitter = this.scheduler.jitterRatio
     let anyUsed = false
     for (const item of items) {
       const id = toNum(item.id)
@@ -139,6 +140,7 @@ export class WarehouseManager {
           this.logger.logWarn('背包', `使用 ${name} 失败: ${e.message}`)
           break
         }
+        await jitteredSleep(300, jitter)
       }
     }
     if (anyUsed) {
@@ -150,23 +152,11 @@ export class WarehouseManager {
     }
   }
 
-  start(): void {
-    if (this.sellTimer || this.initTimer) return
-    this.initTimer = setTimeout(() => {
-      this.initTimer = null
-      this.sellAllFruits()
-      this.sellTimer = setInterval(() => this.sellAllFruits(), 60000)
-    }, 10000)
-  }
-
-  stop(): void {
-    if (this.initTimer) {
-      clearTimeout(this.initTimer)
-      this.initTimer = null
-    }
-    if (this.sellTimer) {
-      clearInterval(this.sellTimer)
-      this.sellTimer = null
-    }
+  registerTasks(): void {
+    this.scheduler.every('warehouse-sell', () => this.sellAllFruits(), {
+      intervalMs: 60_000,
+      startDelayMs: 10_000,
+      name: '仓库出售',
+    })
   }
 }

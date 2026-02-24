@@ -41,6 +41,17 @@ QQ/微信农场自动化挂机工具 — 全屏终端 UI + 多账号 + HTTP API
 - **HTTP API** — RESTful 接口 + Swagger UI，可选启用
 - **服务器推送** — 实时响应土地变化/升级/任务完成/新邮件/图鉴红点等推送
 - **断线重连** — 自动检测连接超时，最多 3 次重连尝试
+- **拟人模式** — 统一任务调度器，操作间隔抖动 + 随机顺序 + 定期休息，降低检测风险
+
+## 风险提示
+
+> **使用本工具存在账号被封禁的风险，请务必知悉：**
+
+- 自动化操作违反游戏服务条款，可能导致账号被临时或永久封禁
+- 长时间在线挂机、高频操作、多账号同时运行均会增加被检测风险
+- 内置「拟人模式」可降低但无法消除风险
+- **强烈建议不要在主力/重要账号上使用**
+- 作者不对因使用本工具造成的任何损失负责
 
 ## 快速开始
 
@@ -98,6 +109,8 @@ bun run src/main.ts --code <code> --wx
 | `autoRefillFertilizer` | bool | `false` | 肥料不足时自动补充 |
 | `enablePutBadThings` | bool | `false` | 对好友农场放虫/放草 |
 | `autoClaimFreeGifts` | bool | `true` | 自动领取商店免费礼包 |
+| `enableHumanMode` | bool | `true` | 拟人模式（操作抖动 + 休息 + 串行化） |
+| `humanModeIntensity` | enum | `'medium'` | 拟人强度：`'low'` / `'medium'` / `'high'` |
 
 ## 键盘操作
 
@@ -159,8 +172,9 @@ src/
 ├── core/                # 业务逻辑
 │   ├── session.ts       # 单账号编排 (Connection + Store + Managers)
 │   ├── account.ts       # 多账号管理
-│   ├── farm.ts          # 农场操作循环 + 土地升级
-│   ├── friend.ts        # 好友巡查循环
+│   ├── scheduler.ts     # 统一任务调度器（拟人模式 + 休息调度）
+│   ├── farm.ts          # 农场操作 + 土地升级
+│   ├── friend.ts        # 好友巡查
 │   ├── task.ts          # 任务 + 活跃度奖励领取
 │   ├── warehouse.ts     # 仓库自动售果
 │   ├── illustrated.ts   # 图鉴奖励自动领取
@@ -197,6 +211,16 @@ src/
 - 微信 code 仅一次性使用，每次需重新获取
 - 服务器有每日操作次数限制，bot 自动跟踪并停止已耗尽的操作
 - 请合理设置巡查间隔，过于频繁可能触发限流
+
+## 版本更新
+
+游戏客户端更新后，bot 可能因版本号或服务器地址过期而无法连接。
+
+欢迎开发者通过 PR 更新 `.version.json`：
+- `app.clientVersion` — 客户端版本号
+- `game.serverUrl` — WebSocket 服务器地址
+
+获取方式：使用 Charles/Fiddler 抓包小程序，从 WebSocket 连接中获取。
 
 ## 免责声明
 
