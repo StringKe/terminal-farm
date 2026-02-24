@@ -1,13 +1,13 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { config } from '../config/index.js'
+import { paths } from '../config/paths.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { ScopedLogger } from '../utils/logger.js'
 import { sleep } from '../utils/logger.js'
 import { toLong } from '../utils/long.js'
 
-const SHARE_FILE = join(process.cwd(), 'share.txt')
+const SHARE_FILE = paths.shareFile
 const INVITE_REQUEST_DELAY = 2000
 
 function parseShareLink(link: string) {

@@ -42,6 +42,7 @@ export function updateConfig(partial: Partial<AppConfig>): void {
 export type { AppConfig, DeviceInfo, AccountConfig } from './schema.js'
 export { accountConfigSchema } from './schema.js'
 export { loadAccountConfig, saveAccountConfig, updateAccountConfig, getDefaultAccountConfig } from './account-config.js'
+export { paths, ensureDataDirs } from './paths.js'
 export {
   PlantPhase,
   PHASE_NAMES,

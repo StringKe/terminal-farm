@@ -1,6 +1,7 @@
 import { type WriteStream, createWriteStream, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { getDateKey, getDateTime } from './format.js'
+import { paths } from '../config/paths.js'
 
 export type LogEntry = {
   timestamp: string
@@ -43,7 +44,7 @@ export function createScopedLogger(getLabel: () => string): ScopedLogger {
 
 type LogListener = (entry: LogEntry) => void
 
-const LOG_DIR = join(process.cwd(), 'logs')
+const LOG_DIR = paths.logsDir
 const MAX_RING_SIZE = 500
 
 let stream: WriteStream | null = null

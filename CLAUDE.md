@@ -83,7 +83,21 @@ src/main.ts (入口，CLI 参数解析)
 - **消息类型**：请求=1，响应=2，推送通知=3
 - **Connection 实例化**：每个账号独立 WebSocket 连接（非全局单例）
 - **循环调度**：farm/friend/warehouse 各自独立 setInterval 循环
-- **登录码持久化**：QQ 平台成功登录后保存至 `.farm-code.json`
+- **登录码持久化**：QQ 平台成功登录后保存至 `data/code.json`
+
+### 运行时数据目录
+
+所有运行时产生的数据集中存放在 `data/`（已 gitignore），路径统一由 `src/config/paths.ts` 管理：
+
+```
+data/
+├── accounts/{gid}.json   # 账号独立配置
+├── logs/YYYY-MM-DD.log   # 日志（每日轮转）
+├── dumps/                 # WebSocket 消息 dump
+├── code.json              # 登录码持久化
+├── stats.json             # 每日统计
+└── share.txt              # 微信邀请码
+```
 
 ### 配置层次
 
@@ -144,4 +158,4 @@ chore: 升级 protobufjs 到 v8
 
 - QQ 支持扫码 + code 复用；微信仅一次性 code
 - 服务器有每日操作次数限制，bot 自动跟踪
-- 日志输出到 `logs/YYYY-MM-DD.log`（每日轮转）+ 内存 ring buffer → UI
+- 日志输出到 `data/logs/YYYY-MM-DD.log`（每日轮转）+ 内存 ring buffer → UI

@@ -1,13 +1,9 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { accountConfigSchema } from './schema.js'
 import type { AccountConfig } from './schema.js'
+import { paths } from './paths.js'
 
 const cache = new Map<number, AccountConfig>()
-
-function configPath(gid: number): string {
-  return join(process.cwd(), `${gid}.json`)
-}
 
 export function getDefaultAccountConfig(): AccountConfig {
   return accountConfigSchema.parse({})
@@ -17,7 +13,7 @@ export function loadAccountConfig(gid: number): AccountConfig {
   const cached = cache.get(gid)
   if (cached) return cached
 
-  const path = configPath(gid)
+  const path = paths.accountConfig(gid)
   let config: AccountConfig
   if (existsSync(path)) {
     try {
@@ -34,7 +30,7 @@ export function loadAccountConfig(gid: number): AccountConfig {
 }
 
 export function saveAccountConfig(gid: number, config: AccountConfig): void {
-  const path = configPath(gid)
+  const path = paths.accountConfig(gid)
   writeFileSync(path, JSON.stringify(config, null, 2), 'utf8')
   cache.set(gid, config)
 }

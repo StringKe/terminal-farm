@@ -1,14 +1,14 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 import axios from 'axios'
 import qrcodeTerminal from 'qrcode-terminal'
+import { paths } from '../config/paths.js'
 
 const CHROME_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 const QUA = 'V1_HT5_QDT_0.70.2209190_x64_0_DEV_D'
 const FARM_APP_ID = '1112386029'
 
-const CODE_FILE = join(process.cwd(), '.farm-code.json')
+const CODE_FILE = paths.loginCode
 
 function getHeaders() {
   return {

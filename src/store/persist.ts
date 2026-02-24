@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { getDateKey } from '../utils/format.js'
+import { paths } from '../config/paths.js'
 
-const STATS_FILE = join(process.cwd(), '.farm-stats.json')
+const STATS_FILE = paths.dailyStats
 
 export interface PersistedStats {
   date: string

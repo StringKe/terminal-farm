@@ -1,8 +1,9 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { types } from './proto-loader.js'
+import { paths } from '../config/paths.js'
 
-const DUMP_DIR = join(process.cwd(), 'dumps')
+const DUMP_DIR = paths.dumpsDir
 
 /** 已知的 notify body 解码器映射（event.message_type 关键字 → types key） */
 const NOTIFY_DECODERS: Record<string, string> = {

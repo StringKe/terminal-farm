@@ -2,6 +2,8 @@ import { render } from 'ink'
 import React from 'react'
 import { App } from './app.js'
 import { config, updateConfig } from './config/index.js'
+import { ensureDataDirs } from './config/paths.js'
+import { migrateOldDataFiles } from './config/migrate.js'
 
 function parseArgs(args: string[]): {
   code?: string
@@ -26,6 +28,10 @@ function parseArgs(args: string[]): {
   }
   return result
 }
+
+// 初始化数据目录 & 迁移旧文件
+ensureDataDirs()
+migrateOldDataFiles()
 
 const cliArgs = parseArgs(process.argv.slice(2))
 

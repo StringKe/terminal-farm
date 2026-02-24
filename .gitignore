@@ -1,15 +1,19 @@
 node_modules/
 dist/
-logs/
 .DS_Store
 *.log
 bun.lockb
 *.tgz
 
-# 敏感/运行时数据
+# 运行时数据目录
+data/
+
+# 旧路径兼容（迁移前残留）
+logs/
+dumps/
 .farm-code.json
 .farm-stats.json
-dumps/
+share.txt
 
 # 生成的数据文件
 tools/*.json
