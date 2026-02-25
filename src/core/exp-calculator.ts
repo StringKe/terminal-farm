@@ -34,17 +34,20 @@ export interface OperationTiming {
   rttSec: number
   /** 逐块操作间 sleep（秒） */
   sleepBetweenSec: number
-  /** 循环固定 RPC 次数 (Harvest + ShopInfo + BuyGoods) */
+  /** 循环固定 RPC 次数 (getAllLands + harvest + shopInfo + buyGoods + avgBatchOp) */
   fixedRpcCount: number
   /** 农场巡检间隔（秒） */
   checkIntervalSec: number
+  /** 调度器串行化引起的每循环额外延迟（秒）：其他任务阻塞、任务间延迟、jitter */
+  schedulerOverheadSec: number
 }
 
 export const DEFAULT_TIMING: OperationTiming = {
   rttSec: 0.15,
-  sleepBetweenSec: 0.05,
-  fixedRpcCount: 3,
+  sleepBetweenSec: 0.08,
+  fixedRpcCount: 5,
   checkIntervalSec: 1,
+  schedulerOverheadSec: 5,
 }
 
 /** exp/h 差距在此比例内视为等价，优先长周期（省金币、少操作） */
@@ -136,13 +139,13 @@ function calcPlantYield(
   const fixedRpcTime = timing.fixedRpcCount * timing.rttSec
   const perLand = timing.rttSec + timing.sleepBetweenSec
 
-  // 不施肥：生长 + 检测延迟 + 固定RPC + 逐块种植
+  // 不施肥：生长 + 检测延迟 + 固定RPC + 逐块种植 + 调度器开销
   const growNoFert = baseGrow * (1 - timeReduction)
-  const cycleNoFert = growNoFert + detectionDelay + fixedRpcTime + landCount * perLand
+  const cycleNoFert = growNoFert + detectionDelay + fixedRpcTime + landCount * perLand + timing.schedulerOverheadSec
 
-  // 施肥（跳过第一阶段）：生长 + 检测延迟 + 固定RPC + 逐块(种植+施肥)
+  // 施肥（跳过第一阶段）：生长 + 检测延迟 + 固定RPC + 逐块(种植+施肥) + 调度器开销
   const growWithFert = (baseGrow - firstPhase) * (1 - timeReduction)
-  const cycleWithFert = growWithFert + detectionDelay + fixedRpcTime + landCount * perLand * 2
+  const cycleWithFert = growWithFert + detectionDelay + fixedRpcTime + landCount * perLand * 2 + timing.schedulerOverheadSec
 
   const expPerHourNoFert = cycleNoFert > 0 ? ((expPerCycle * landCount) / cycleNoFert) * 3600 : 0
   const expPerHourWithFert = cycleWithFert > 0 ? ((expPerCycle * landCount) / cycleWithFert) * 3600 : 0

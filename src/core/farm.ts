@@ -48,11 +48,24 @@ export class FarmManager {
   }
 
   private getOperationTiming(): OperationTiming {
+    const jitter = this.scheduler.jitterRatio
     return {
       rttSec: this.conn.getAverageRttMs() / 1000,
-      sleepBetweenSec: 0.05,
-      fixedRpcCount: 3,
+      sleepBetweenSec: jitter > 0 ? 0.08 : 0.05,
+      fixedRpcCount: 5,
       checkIntervalSec: config.farmCheckInterval / 1000,
+      schedulerOverheadSec: this.getSchedulerOverhead(),
+    }
+  }
+
+  private getSchedulerOverhead(): number {
+    const cfg = this.getAccountConfig()
+    if (!cfg.enableHumanMode) return 1
+    switch (cfg.humanModeIntensity) {
+      case 'low': return 3
+      case 'medium': return 5
+      case 'high': return 10
+      default: return 5
     }
   }
 
