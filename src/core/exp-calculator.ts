@@ -53,6 +53,9 @@ export const DEFAULT_TIMING: OperationTiming = {
 /** exp/h 差距在此比例内视为等价，优先长周期（省金币、少操作） */
 const EXP_EQUIV_RATIO = 0.01
 
+/** 最低基础生长时间（秒），低于此值的作物排除（防止超短周期刷屏）；低等级无候选时回退 */
+const MIN_BASE_GROW_SEC = 300
+
 /** 比较两个植物的 exp/h，等价时优先长周期 */
 function compareYield(
   a: PlantYieldAtLevel,
@@ -143,9 +146,10 @@ function calcPlantYield(
   const growNoFert = baseGrow * (1 - timeReduction)
   const cycleNoFert = growNoFert + detectionDelay + fixedRpcTime + landCount * perLand + timing.schedulerOverheadSec
 
-  // 施肥（跳过第一阶段）：生长 + 检测延迟 + 固定RPC + 逐块(种植+施肥) + 调度器开销
+  // 施肥（跳过第一阶段）：生长 + 检测延迟 + 固定RPC + 逐块(种植+普通施肥+有机施肥) + 调度器开销
   const growWithFert = (baseGrow - firstPhase) * (1 - timeReduction)
-  const cycleWithFert = growWithFert + detectionDelay + fixedRpcTime + landCount * perLand * 2 + timing.schedulerOverheadSec
+  const cycleWithFert =
+    growWithFert + detectionDelay + fixedRpcTime + landCount * perLand * 3 + timing.schedulerOverheadSec
 
   const expPerHourNoFert = cycleNoFert > 0 ? ((expPerCycle * landCount) / cycleNoFert) * 3600 : 0
   const expPerHourWithFert = cycleWithFert > 0 ? ((expPerCycle * landCount) / cycleWithFert) * 3600 : 0
@@ -174,7 +178,8 @@ export function calculateForLandLevel(
   timing?: OperationTiming,
 ): PlantYieldAtLevel[] {
   const plants = getAllPlants()
-  const results: PlantYieldAtLevel[] = []
+  const all: PlantYieldAtLevel[] = []
+  const filtered: PlantYieldAtLevel[] = []
   const t = timing ?? DEFAULT_TIMING
 
   for (const plant of plants) {
@@ -183,9 +188,13 @@ export function calculateForLandLevel(
     if (plant.land_level_need > level) continue
 
     const yield_ = calcPlantYield(plant, level, count, t)
-    if (yield_) results.push(yield_)
+    if (!yield_) continue
+    all.push(yield_)
+    if (yield_.baseGrowTimeSec >= MIN_BASE_GROW_SEC) filtered.push(yield_)
   }
 
+  // 有足够长周期作物时用过滤结果，否则回退（低等级只有超短周期作物）
+  const results = filtered.length > 0 ? filtered : all
   results.sort((a, b) => compareYield(a, b, 'expPerHourWithFert'))
   return results.slice(0, top)
 }
