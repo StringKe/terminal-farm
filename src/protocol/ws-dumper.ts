@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { types } from './proto-loader.js'
 import { paths } from '../config/paths.js'
+import { types } from './proto-loader.js'
 
 const DUMP_DIR = paths.dumpsDir
 

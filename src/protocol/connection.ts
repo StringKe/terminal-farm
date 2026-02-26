@@ -324,6 +324,17 @@ export class Connection extends EventEmitter {
         return
       }
 
+      if (type.includes('GetTodayClaimStatusNotify')) {
+        try {
+          const notify = types.GetTodayClaimStatusNotify.decode(eventBody) as any
+          const activities = notify.activities || []
+          if (activities.length > 0) {
+            this.emit('redpacketStatusNotify', activities)
+          }
+        } catch {}
+        return
+      }
+
       if (type.includes('IllustratedRewardRedDotNotifyV2')) {
         try {
           const notify = types.IllustratedRewardRedDotNotifyV2.decode(eventBody) as any

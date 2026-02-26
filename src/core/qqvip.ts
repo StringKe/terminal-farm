@@ -15,7 +15,11 @@ export class QQVipManager {
   async checkAndClaim(): Promise<void> {
     try {
       const body = types.GetDailyGiftStatusRequest.encode(types.GetDailyGiftStatusRequest.create({})).finish()
-      const { body: replyBody } = await this.conn.sendMsgAsync('gamepb.userpb.UserService', 'GetDailyGiftStatus', body)
+      const { body: replyBody } = await this.conn.sendMsgAsync(
+        'gamepb.qqvippb.QQVipService',
+        'GetDailyGiftStatus',
+        body,
+      )
       const reply = types.GetDailyGiftStatusReply.decode(replyBody) as any
 
       if (!reply.is_qq_vip) return
@@ -32,7 +36,7 @@ export class QQVipManager {
   private async claimGift(): Promise<void> {
     try {
       const body = types.ClaimDailyGiftRequest.encode(types.ClaimDailyGiftRequest.create({})).finish()
-      const { body: replyBody } = await this.conn.sendMsgAsync('gamepb.userpb.UserService', 'ClaimDailyGift', body)
+      const { body: replyBody } = await this.conn.sendMsgAsync('gamepb.qqvippb.QQVipService', 'ClaimDailyGift', body)
       const reply = types.ClaimDailyGiftReply.decode(replyBody) as any
       const rewards = reply.rewards || []
       if (rewards.length > 0) {

@@ -12,6 +12,26 @@ export class IllustratedManager {
     private scheduler: TaskScheduler,
   ) {}
 
+  async getUnlockedFruitIds(): Promise<Set<number>> {
+    const body = types.GetIllustratedListV2Request.encode(
+      types.GetIllustratedListV2Request.create({ type: 1 }),
+    ).finish()
+    const { body: replyBody } = await this.conn.sendMsgAsync(
+      'gamepb.illustratedpb.IllustratedService',
+      'GetIllustratedListV2',
+      body,
+    )
+    const reply = types.GetIllustratedListV2Reply.decode(replyBody) as any
+    const list = reply.list || []
+    const unlocked = new Set<number>()
+    for (const info of list) {
+      if (info.unlocked) {
+        unlocked.add(info.fruit_id)
+      }
+    }
+    return unlocked
+  }
+
   async checkAndClaimRewards(): Promise<void> {
     try {
       const body = types.GetIllustratedLevelListV2Request.encode(

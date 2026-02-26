@@ -1,7 +1,9 @@
 import { Writer } from 'protobufjs'
 import { FERTILIZER_REFILL_ITEMS } from '../config/constants.js'
 import {
+  type PlantConfig,
   formatGrowTime,
+  getAllPlants,
   getItemName,
   getPlantExp,
   getPlantGrowTime,
@@ -19,6 +21,7 @@ import { toLong, toNum } from '../utils/long.js'
 import { jitteredSleep, shuffleArray } from '../utils/random.js'
 import { getServerTimeSec, toTimeSec } from '../utils/time.js'
 import { type OperationTiming, calculateForLandLevel } from './exp-calculator.js'
+import type { IllustratedManager } from './illustrated.js'
 import type { TaskScheduler } from './scheduler.js'
 
 export type OperationLimitsCallback = (limits: any[]) => void
@@ -28,6 +31,7 @@ export class FarmManager {
   private isFirstCheck = true
   private isFirstReplantLog = true
   private onOperationLimitsUpdate: OperationLimitsCallback | null = null
+  private illustratedManager: IllustratedManager | null = null
 
   constructor(
     private conn: Connection,
@@ -39,6 +43,10 @@ export class FarmManager {
 
   setOperationLimitsCallback(cb: OperationLimitsCallback): void {
     this.onOperationLimitsUpdate = cb
+  }
+
+  setIllustratedManager(mgr: IllustratedManager): void {
+    this.illustratedManager = mgr
   }
 
   private getOperationTiming(): OperationTiming {
@@ -305,6 +313,26 @@ export class FarmManager {
     return sorted[0] ?? null
   }
 
+  private async findIllustratedSeed(available: any[]): Promise<{ seed: any; plant: PlantConfig } | null> {
+    if (!this.illustratedManager) return null
+    if (!this.getAccountConfig().enableIllustratedUnlock) return null
+    try {
+      const unlockedFruits = await this.illustratedManager.getUnlockedFruitIds()
+      const allPlants = getAllPlants()
+      const shopSeedIds = new Set(available.map((a: any) => a.seedId))
+      for (const plant of allPlants) {
+        if (!plant.fruit?.id) continue
+        if (unlockedFruits.has(plant.fruit.id)) continue
+        if (!shopSeedIds.has(plant.seed_id)) continue
+        const seed = available.find((a: any) => a.seedId === plant.seed_id)
+        if (seed) return { seed, plant }
+      }
+    } catch (e: any) {
+      this.logger.logWarn('图鉴', `查询图鉴列表失败: ${e.message}`)
+    }
+    return null
+  }
+
   async autoPlantEmptyLands(deadLandIds: number[], emptyLandIds: number[], allLands: any[]): Promise<void> {
     const landsToPlant = [...emptyLandIds]
     const state = this.conn.userState
@@ -328,6 +356,30 @@ export class FarmManager {
       return
     }
     if (!available) return
+
+    // 图鉴解锁模式: 用一块地种未解锁的植物
+    let illustratedLandId: number | null = null
+    const illustratedSeed = await this.findIllustratedSeed(available)
+    if (illustratedSeed && landsToPlant.length > 0) {
+      illustratedLandId = landsToPlant.shift()!
+      const { seed, plant } = illustratedSeed
+      this.logger.log('图鉴', `解锁模式: ${plant.name}(${seed.seedId}) → 土地#${illustratedLandId}`)
+      try {
+        await this.buyGoods(seed.goodsId, 1, seed.price)
+        const planted = await this.plantSeeds(seed.seedId, [illustratedLandId])
+        if (planted > 0) {
+          const fertCfg = this.getAccountConfig()
+          if (fertCfg.useNormalFertilizer) await this.fertilize([illustratedLandId])
+          if (fertCfg.useOrganicFertilizer) await this.fertilize([illustratedLandId], ORGANIC_FERTILIZER_ID)
+        }
+      } catch (e: any) {
+        this.logger.logWarn('图鉴', `图鉴种植失败: ${e.message}`)
+        landsToPlant.unshift(illustratedLandId)
+        illustratedLandId = null
+      }
+    }
+
+    if (!landsToPlant.length) return
 
     const totalLandCount = allLands.filter((l: any) => l.unlocked).length
     const bestSeed = this.findBestSeed(available, totalLandCount)
@@ -570,10 +622,26 @@ export class FarmManager {
     const bestSeedId = bestSeed.seedId
     const bestName = getPlantNameBySeedId(bestSeedId)
 
+    // 图鉴解锁模式: 获取未解锁 fruit_id，跳过正在种图鉴植物的地块
+    let illustratedFruits: Set<number> | null = null
+    if (this.getAccountConfig().enableIllustratedUnlock && this.illustratedManager) {
+      try {
+        const unlocked = await this.illustratedManager.getUnlockedFruitIds()
+        const allPlants = getAllPlants()
+        illustratedFruits = new Set<number>()
+        for (const p of allPlants) {
+          if (p.fruit?.id && !unlocked.has(p.fruit.id)) {
+            illustratedFruits.add(p.id)
+          }
+        }
+      } catch {}
+    }
+
     const nowSec = getServerTimeSec()
     const toReplant: number[] = []
     let protectedCount = 0
     let alreadyBestCount = 0
+    let illustratedProtectedCount = 0
     for (const land of lands) {
       const id = toNum(land.id)
       if (!land.unlocked) continue
@@ -588,6 +656,11 @@ export class FarmManager {
       const currentSeedId = getSeedIdByPlantId(plantId)
       if (currentSeedId === bestSeedId) {
         alreadyBestCount++
+        continue
+      }
+      // 图鉴解锁保护: 正在种未解锁图鉴植物的地块不铲
+      if (illustratedFruits?.has(plantId)) {
+        illustratedProtectedCount++
         continue
       }
       const firstPhaseBegin = toTimeSec(plant.phases[0].begin_time)
@@ -609,11 +682,13 @@ export class FarmManager {
     }
     if (!toReplant.length) {
       if (trigger === 'levelup') {
-        this.logger.log('换种', `无需换种 → ${bestName} (最优${alreadyBestCount}, 保护${protectedCount})`)
+        const extra = illustratedProtectedCount > 0 ? `, 图鉴${illustratedProtectedCount}` : ''
+        this.logger.log('换种', `无需换种 → ${bestName} (最优${alreadyBestCount}, 保护${protectedCount}${extra})`)
       }
       return
     }
-    this.logger.log('换种', `铲除${toReplant.length}块, 保护${protectedCount}块 → ${bestName}`)
+    const extra = illustratedProtectedCount > 0 ? `, 图鉴保护${illustratedProtectedCount}` : ''
+    this.logger.log('换种', `铲除${toReplant.length}块, 保护${protectedCount}块${extra} → ${bestName}`)
     try {
       await this.autoPlantEmptyLands(toReplant, [], lands)
     } catch (e: any) {

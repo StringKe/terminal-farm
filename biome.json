@@ -37,6 +37,19 @@
     }
   },
   "files": {
-    "ignore": ["node_modules", "dist", "logs", "game-config", "proto", "tools/*.json", "tools/*.csv", "tools/*.txt"]
+    "ignore": [
+      "node_modules",
+      "dist",
+      "logs",
+      "game-config",
+      "proto",
+      "data",
+      "stubs",
+      "local",
+      "src/protocol/proto-bundle.json",
+      "tools/*.json",
+      "tools/*.csv",
+      "tools/*.txt"
+    ]
   }
 }

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { paths } from './paths.js'
 import { accountConfigSchema } from './schema.js'
 import type { AccountConfig } from './schema.js'
-import { paths } from './paths.js'
 
 const cache = new Map<number, AccountConfig>()
 

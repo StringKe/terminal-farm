@@ -344,11 +344,15 @@ export class FriendManager {
         }
       }
       // Write full friend list to store for UI (preserve existing actions, deduplicate)
+      // 与客户端一致：过滤无 open_id 的好友、排除自己、按 gid 去重
       const existingActions = new Map(this.store.state.friendList.map((f) => [f.gid, f.actions]))
       const seenGids = new Set<number>()
       const dedupedFriends: { gid: number; name: string; level: number; actions: string[] }[] = []
       for (const f of friends) {
         const gid = toNum(f.gid)
+        const openId = f.open_id
+        if (!openId || openId === '') continue
+        if (gid === state.gid) continue
         if (seenGids.has(gid)) continue
         seenGids.add(gid)
         dedupedFriends.push({
@@ -358,7 +362,7 @@ export class FriendManager {
           actions: existingActions.get(gid) || [],
         })
       }
-      this.store.updateFriendList(dedupedFriends, friends.length)
+      this.store.updateFriendList(dedupedFriends, dedupedFriends.length)
 
       if (!friendsToVisit.length) return
       const jitter = this.scheduler.jitterRatio

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { getDateKey } from '../utils/format.js'
 import { paths } from '../config/paths.js'
+import { getDateKey } from '../utils/format.js'
 
 const STATS_FILE = paths.dailyStats
 

@@ -29,6 +29,7 @@ const SETTINGS: SettingItem[] = [
   { key: 'autoUseGiftPacks', label: '自动开礼包', type: 'boolean' },
   { key: 'enableHumanMode', label: '拟人模式', type: 'boolean' },
   { key: 'humanModeIntensity', label: '拟人强度', type: 'enum', enumValues: ['low', 'medium', 'high'] },
+  { key: 'enableIllustratedUnlock', label: '图鉴解锁模式', type: 'boolean' },
 ]
 
 interface SettingsPanelProps {

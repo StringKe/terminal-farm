@@ -1,5 +1,5 @@
-import { join } from 'node:path'
 import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 
 /** 运行时数据根目录 */
 const DATA_ROOT = join(process.cwd(), 'data')

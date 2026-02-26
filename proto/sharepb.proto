@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package gamepb.sharepb;
+
+import "corepb.proto";
+
+// ============ 分享 ============
+
+enum ShareChannel {
+    UNKNOWN = 0;
+    PRIVATE = 1;
+    GROUP = 2;
+    ZONE = 3;
+}
+
+message ShareInfo {
+    int64 share_count = 1;
+    bool is_claimed = 2;
+}
+
+// --- 检查是否可分享 ---
+message CheckCanShareRequest {}
+
+message CheckCanShareReply {
+    bool can_share = 1;
+}
+
+// --- 上报分享 ---
+message ReportShareRequest {
+    int64 share_id = 1;
+    repeated int64 params = 2;
+    ShareChannel channel = 3;
+}
+
+message ReportShareReply {
+    map<int64, ShareInfo> share_infos = 1;
+}
+
+// --- 领取分享奖励 ---
+message ClaimShareRewardRequest {
+    int64 share_id = 1;
+}
+
+message ClaimShareRewardReply {
+    repeated corepb.Item rewards = 1;
+    map<int64, ShareInfo> share_infos = 2;
+    repeated corepb.Item compensated_items = 3;
+}

@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package gamepb.qqvippb;
+
+import "corepb.proto";
+
+// ============ QQ会员每日礼包 ============
+
+message GetDailyGiftStatusRequest {}
+
+message GetDailyGiftStatusReply {
+    bool is_qq_vip = 1;
+    bool can_claim = 2;
+    bool claimed_today = 3;
+}
+
+message ClaimDailyGiftRequest {}
+
+message ClaimDailyGiftReply {
+    repeated corepb.Item rewards = 1;
+}
+
+// QQ会员礼包状态变化推送
+message DailyGiftStatusChangedNTF {
+    bool is_qq_vip = 1;
+    bool can_claim = 2;
+    bool claimed_today = 3;
+}

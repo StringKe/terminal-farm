@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package gamepb.redpacketpb;
+
+import "corepb.proto";
+
+// ============ 红包活动 ============
+
+enum ActivityStatus {
+    UNKNOWN = 0;
+    NORMAL = 1;
+    NOT_STARTED = 2;
+    ENDED = 3;
+    NOT_UNLOCKED = 4;
+    LIMIT_REACHED = 5;
+}
+
+message ActivityStatusInfo {
+    int64 activity_id = 1;
+    bool claimed_today = 2;
+    ActivityStatus status = 3;
+    string act_description = 4;
+    string act_name = 5;
+    string act_time = 6;
+    string act_instructions = 7;
+}
+
+// --- 查询今日领取状态 ---
+message GetTodayClaimStatusRequest {
+    repeated int64 activity_ids = 1;
+}
+
+message GetTodayClaimStatusReply {
+    repeated ActivityStatusInfo activities = 1;
+}
+
+// --- 推送通知 ---
+message GetTodayClaimStatusNotify {
+    repeated ActivityStatusInfo activities = 1;
+}
+
+// --- 领取红包 ---
+message ClaimRedPacketRequest {
+    int64 activity_id = 1;
+}
+
+message ClaimRedPacketReply {
+    int32 status = 1;
+    corepb.Item item = 2;
+}

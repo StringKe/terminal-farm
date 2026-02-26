@@ -4,9 +4,9 @@
  * 用法: bun run tools/calc-exp-yield.ts [--lands N] [--level N]
  */
 
-import { parseArgs } from 'util'
-import { getAllPlants, getSeedPrice, getSeedUnlockLevel, formatGrowTime } from '../src/config/game-data.js'
-import { calculateForLandLevel, type PlantYieldAtLevel, DEFAULT_TIMING } from '../src/core/exp-calculator.js'
+import { parseArgs } from 'node:util'
+import { formatGrowTime } from '../src/config/game-data.js'
+import { DEFAULT_TIMING, type PlantYieldAtLevel, calculateForLandLevel } from '../src/core/exp-calculator.js'
 
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
@@ -23,9 +23,7 @@ if (values.level) {
   const level = Number(values.level)
   const ranked = calculateForLandLevel(1, lands, level, 20, DEFAULT_TIMING)
   console.log(`\nLv${level} | ${lands}块地 | 前20最优作物:\n`)
-  console.log(
-    '排名  种子ID  名称            解锁  价格    季数  生长时间      exp/周期  exp/h(施肥)  exp/h(无肥)',
-  )
+  console.log('排名  种子ID  名称            解锁  价格    季数  生长时间      exp/周期  exp/h(施肥)  exp/h(无肥)')
   console.log('-'.repeat(105))
   for (let i = 0; i < ranked.length; i++) {
     const r = ranked[i]
@@ -38,9 +36,7 @@ if (values.level) {
 
 // 全等级模式: 1-200
 console.log(`\n作物选择表 (${lands}块地)\n`)
-console.log(
-  '等级范围          最优作物        种子ID  价格    生长时间      exp/周期  exp/h(施肥)',
-)
+console.log('等级范围          最优作物        种子ID  价格    生长时间      exp/周期  exp/h(施肥)')
 console.log('-'.repeat(95))
 
 let prevBest: PlantYieldAtLevel | null = null
@@ -80,10 +76,8 @@ if (prevBest) {
 }
 
 // 详细表: 每个等级变化点
-console.log(`\n\n变化点详情:\n`)
-console.log(
-  '等级  最优作物        种子ID  解锁  价格    生长时间      exp  季数  exp/h(施肥)  exp/h(无肥)',
-)
+console.log('\n\n变化点详情:\n')
+console.log('等级  最优作物        种子ID  解锁  价格    生长时间      exp  季数  exp/h(施肥)  exp/h(无肥)')
 console.log('-'.repeat(100))
 
 let lastSeedId = -1

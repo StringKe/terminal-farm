@@ -2,8 +2,8 @@ import { render } from 'ink'
 import React from 'react'
 import { App } from './app.js'
 import { config, updateConfig } from './config/index.js'
-import { ensureDataDirs } from './config/paths.js'
 import { migrateOldDataFiles } from './config/migrate.js'
+import { ensureDataDirs } from './config/paths.js'
 
 function parseArgs(args: string[]): {
   code?: string

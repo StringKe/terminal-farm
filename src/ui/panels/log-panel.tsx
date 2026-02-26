@@ -1,14 +1,15 @@
 import { Box, Text } from 'ink'
 import { useEffect, useState } from 'react'
+import { getChinaTimeStr, getLocalTimeStr } from '../../utils/format.js'
 import type { LogEntry } from '../../utils/logger.js'
 import { PanelBox } from '../components/panel-box.js'
 import { useGlobalLogs } from '../hooks/use-store.js'
 
-function useCurrentTime(): string {
-  const [time, setTime] = useState(() => new Date().toLocaleTimeString('zh-CN', { hour12: false }))
+function useCurrentTime(): { local: string; game: string } {
+  const [time, setTime] = useState(() => ({ local: getLocalTimeStr(), game: getChinaTimeStr() }))
   useEffect(() => {
     const timer = setInterval(() => {
-      setTime(new Date().toLocaleTimeString('zh-CN', { hour12: false }))
+      setTime({ local: getLocalTimeStr(), game: getChinaTimeStr() })
     }, 1000)
     return () => clearInterval(timer)
   }, [])
@@ -50,14 +51,14 @@ interface GlobalLogPanelProps {
 
 export function GlobalLogPanel({ scrollOffset = 0, maxLines = 10 }: GlobalLogPanelProps) {
   const logs = useGlobalLogs()
-  const currentTime = useCurrentTime()
+  const clock = useCurrentTime()
 
   const end = logs.length - scrollOffset
   const start = Math.max(0, end - maxLines)
   const displayLogs = logs.slice(start, Math.max(end, 0))
 
   return (
-    <PanelBox title={`日志 ${currentTime}`}>
+    <PanelBox title={`日志 本机 ${clock.local} | 游戏 ${clock.game}`}>
       {scrollOffset > 0 && <Text dimColor>↑ 更早日志</Text>}
       {displayLogs.length === 0 ? (
         <Text dimColor>无日志</Text>

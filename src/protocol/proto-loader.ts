@@ -110,11 +110,42 @@ export async function loadProto(): Promise<void> {
   types.GetCurrentWeatherReply = root.lookupType('gamepb.weatherpb.GetCurrentWeatherReply')
 
   // QQ Vip
-  types.GetDailyGiftStatusRequest = root.lookupType('gamepb.userpb.GetDailyGiftStatusRequest')
-  types.GetDailyGiftStatusReply = root.lookupType('gamepb.userpb.GetDailyGiftStatusReply')
-  types.ClaimDailyGiftRequest = root.lookupType('gamepb.userpb.ClaimDailyGiftRequest')
-  types.ClaimDailyGiftReply = root.lookupType('gamepb.userpb.ClaimDailyGiftReply')
-  types.DailyGiftStatusChangedNTF = root.lookupType('gamepb.userpb.DailyGiftStatusChangedNTF')
+  types.GetDailyGiftStatusRequest = root.lookupType('gamepb.qqvippb.GetDailyGiftStatusRequest')
+  types.GetDailyGiftStatusReply = root.lookupType('gamepb.qqvippb.GetDailyGiftStatusReply')
+  types.ClaimDailyGiftRequest = root.lookupType('gamepb.qqvippb.ClaimDailyGiftRequest')
+  types.ClaimDailyGiftReply = root.lookupType('gamepb.qqvippb.ClaimDailyGiftReply')
+  types.DailyGiftStatusChangedNTF = root.lookupType('gamepb.qqvippb.DailyGiftStatusChangedNTF')
+
+  // Red Packet
+  types.GetTodayClaimStatusRequest = root.lookupType('gamepb.redpacketpb.GetTodayClaimStatusRequest')
+  types.GetTodayClaimStatusReply = root.lookupType('gamepb.redpacketpb.GetTodayClaimStatusReply')
+  types.GetTodayClaimStatusNotify = root.lookupType('gamepb.redpacketpb.GetTodayClaimStatusNotify')
+  types.ClaimRedPacketRequest = root.lookupType('gamepb.redpacketpb.ClaimRedPacketRequest')
+  types.ClaimRedPacketReply = root.lookupType('gamepb.redpacketpb.ClaimRedPacketReply')
+
+  // Mall
+  types.GetMallProfilesRequest = root.lookupType('gamepb.mallpb.GetMallProfilesRequest')
+  types.GetMallProfilesReply = root.lookupType('gamepb.mallpb.GetMallProfilesReply')
+  types.GetMallListBySlotTypeRequest = root.lookupType('gamepb.mallpb.GetMallListBySlotTypeRequest')
+  types.GetMallListBySlotTypeReply = root.lookupType('gamepb.mallpb.GetMallListBySlotTypeReply')
+  types.PurchaseRequest = root.lookupType('gamepb.mallpb.PurchaseRequest')
+  types.PurchaseReply = root.lookupType('gamepb.mallpb.PurchaseReply')
+  types.GetMonthCardInfosRequest = root.lookupType('gamepb.mallpb.GetMonthCardInfosRequest')
+  types.GetMonthCardInfosReply = root.lookupType('gamepb.mallpb.GetMonthCardInfosReply')
+  types.ClaimMonthCardRewardRequest = root.lookupType('gamepb.mallpb.ClaimMonthCardRewardRequest')
+  types.ClaimMonthCardRewardReply = root.lookupType('gamepb.mallpb.ClaimMonthCardRewardReply')
+
+  // Share
+  types.CheckCanShareRequest = root.lookupType('gamepb.sharepb.CheckCanShareRequest')
+  types.CheckCanShareReply = root.lookupType('gamepb.sharepb.CheckCanShareReply')
+  types.ReportShareRequest = root.lookupType('gamepb.sharepb.ReportShareRequest')
+  types.ReportShareReply = root.lookupType('gamepb.sharepb.ReportShareReply')
+  types.ClaimShareRewardRequest = root.lookupType('gamepb.sharepb.ClaimShareRewardRequest')
+  types.ClaimShareRewardReply = root.lookupType('gamepb.sharepb.ClaimShareRewardReply')
+
+  // Illustrated (additional)
+  types.GetIllustratedListV2Request = root.lookupType('gamepb.illustratedpb.GetIllustratedListV2Request')
+  types.GetIllustratedListV2Reply = root.lookupType('gamepb.illustratedpb.GetIllustratedListV2Reply')
 
   // Notify
   types.LandsNotify = root.lookupType('gamepb.plantpb.LandsNotify')

@@ -8,7 +8,9 @@ import { FarmManager } from './farm.js'
 import { FriendManager } from './friend.js'
 import { IllustratedManager } from './illustrated.js'
 import { processInviteCodes } from './invite.js'
+import { MallManager } from './mall.js'
 import { QQVipManager } from './qqvip.js'
+import { RedPacketManager } from './redpacket.js'
 import { TaskScheduler } from './scheduler.js'
 import { ShopManager } from './shop.js'
 import { TaskManager } from './task.js'
@@ -32,6 +34,8 @@ export class Session {
   readonly weather: WeatherManager
   readonly qqvip: QQVipManager
   readonly shop: ShopManager
+  readonly redpacket: RedPacketManager
+  readonly mall: MallManager
 
   accountConfig: AccountConfig
 
@@ -64,6 +68,9 @@ export class Session {
     this.weather = new WeatherManager(this.conn, this.store, logger, this.scheduler)
     this.qqvip = new QQVipManager(this.conn, logger, this.scheduler)
     this.shop = new ShopManager(this.conn, getAccountConfig, logger, this.scheduler)
+    this.redpacket = new RedPacketManager(this.conn, logger, this.scheduler)
+    this.mall = new MallManager(this.conn, logger, this.scheduler)
+    this.farm.setIllustratedManager(this.illustrated)
 
     // Forward connection events to store
     this.conn.on('login', (state) => this.store.updateUser(state))
@@ -147,6 +154,8 @@ export class Session {
     this.weather.registerTasks()
     this.qqvip.registerTasks()
     this.shop.registerTasks()
+    this.redpacket.registerTasks()
+    this.mall.registerTasks()
     this.scheduler.start()
   }
 

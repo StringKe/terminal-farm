@@ -1,7 +1,7 @@
 import { type WriteStream, createWriteStream, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { getDateKey, getDateTime } from './format.js'
 import { paths } from '../config/paths.js'
+import { getDateKey, getDateTime } from './format.js'
 
 export type LogEntry = {
   timestamp: string

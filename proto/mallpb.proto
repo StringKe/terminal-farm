@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package gamepb.mallpb;
+
+import "corepb.proto";
+
+// ============ 商城 ============
+
+message MallProfile {
+    int64 id = 1;
+    int32 mall_type = 2;
+}
+
+message RestrictionInfo {
+    int32 type = 1;
+    int64 current_count = 2;
+    int64 max_count = 3;
+}
+
+message ProductInfo {
+    int64 id = 1;
+    string name = 2;
+    int32 slot_type = 3;
+    repeated corepb.Item items = 4;
+    corepb.Item price = 5;
+    bool is_free = 6;
+    RestrictionInfo restriction = 7;
+    bool is_available_purchase = 8;
+    string discount = 9;
+}
+
+// --- 商城分类 ---
+message GetMallProfilesRequest {}
+
+message GetMallProfilesReply {
+    repeated MallProfile mall_profiles = 1;
+}
+
+// --- 商品列表 ---
+message GetMallListBySlotTypeRequest {
+    int32 slot_type = 1;
+}
+
+message GetMallListBySlotTypeReply {
+    repeated ProductInfo products = 1;
+    int64 refresh_time = 2;
+}
+
+// --- 购买 ---
+message PurchaseRequest {
+    int64 id = 1;
+    int64 buy_num = 2;
+}
+
+message PurchaseReply {
+    int64 id = 1;
+    bool success = 2;
+    repeated corepb.Item reward_items = 3;
+    bool is_first_buy = 4;
+    RestrictionInfo restriction = 5;
+}
+
+// ============ 月卡 ============
+
+message MonthCardInfo {
+    int64 id = 1;
+    repeated corepb.Item reward_items = 2;
+    bool has_reward_items = 3;
+    int64 remaining_days = 4;
+    int64 count = 5;
+    int64 total_count = 6;
+    bool is_active = 7;
+    int64 price = 8;
+    int64 duration_days = 9;
+    string pay_product_id = 10;
+    repeated corepb.Item active_rewards = 11;
+    bool has_active_rewards = 12;
+    bool can_buy = 13;
+}
+
+message GetMonthCardInfosRequest {}
+
+message GetMonthCardInfosReply {
+    repeated MonthCardInfo month_cards = 1;
+    int64 refresh_time = 2;
+}
+
+message ClaimMonthCardRewardRequest {
+    int64 id = 1;
+}
+
+message ClaimMonthCardRewardReply {
+    repeated corepb.Item reward_items = 1;
+    MonthCardInfo month_card = 2;
+}

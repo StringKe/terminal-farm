@@ -1,8 +1,21 @@
 import { Box, Text } from 'ink'
+import { useEffect, useState } from 'react'
 import { getLevelExpProgress } from '../../config/game-data.js'
 import type { UserState } from '../../protocol/types.js'
 import type { SchedulerStatusInfo } from '../../store/session-store.js'
+import { getChinaTimeStr, getLocalTimeStr } from '../../utils/format.js'
 import { ProgressBar } from '../components/progress-bar.js'
+
+function useClockTick(): { local: string; game: string } {
+  const [tick, setTick] = useState(() => ({ local: getLocalTimeStr(), game: getChinaTimeStr() }))
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick({ local: getLocalTimeStr(), game: getChinaTimeStr() })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+  return tick
+}
 
 interface StatusBarProps {
   user: UserState
@@ -13,6 +26,7 @@ interface StatusBarProps {
 
 export function StatusBar({ user, platform, apiPort, schedulerStatus }: StatusBarProps) {
   const progress = getLevelExpProgress(user.level, user.exp)
+  const clock = useClockTick()
 
   return (
     <Box borderStyle="single" borderColor="gray" paddingX={1} justifyContent="space-between">
@@ -40,6 +54,9 @@ export function StatusBar({ user, platform, apiPort, schedulerStatus }: StatusBa
           <Text dimColor>[拟人]</Text>
         ) : null}
         {apiPort ? <Text dimColor>API :{apiPort}</Text> : null}
+        <Text dimColor>
+          本机 {clock.local.slice(0, 5)} | 游戏 {clock.game.slice(0, 5)}
+        </Text>
       </Box>
     </Box>
   )

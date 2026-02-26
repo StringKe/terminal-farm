@@ -384,53 +384,6 @@
                   "id": 1
                 }
               }
-            },
-            "GetDailyGiftStatusRequest": {
-              "fields": {}
-            },
-            "GetDailyGiftStatusReply": {
-              "fields": {
-                "is_qq_vip": {
-                  "type": "bool",
-                  "id": 1
-                },
-                "can_claim": {
-                  "type": "bool",
-                  "id": 2
-                },
-                "claimed_today": {
-                  "type": "bool",
-                  "id": 3
-                }
-              }
-            },
-            "ClaimDailyGiftRequest": {
-              "fields": {}
-            },
-            "ClaimDailyGiftReply": {
-              "fields": {
-                "rewards": {
-                  "rule": "repeated",
-                  "type": "corepb.Item",
-                  "id": 1
-                }
-              }
-            },
-            "DailyGiftStatusChangedNTF": {
-              "fields": {
-                "is_qq_vip": {
-                  "type": "bool",
-                  "id": 1
-                },
-                "can_claim": {
-                  "type": "bool",
-                  "id": 2
-                },
-                "claimed_today": {
-                  "type": "bool",
-                  "id": 3
-                }
-              }
             }
           }
         },
@@ -2452,6 +2405,476 @@
                 "current_weather": {
                   "type": "WeatherSlot",
                   "id": 1
+                }
+              }
+            }
+          }
+        },
+        "qqvippb": {
+          "nested": {
+            "GetDailyGiftStatusRequest": {
+              "fields": {}
+            },
+            "GetDailyGiftStatusReply": {
+              "fields": {
+                "is_qq_vip": {
+                  "type": "bool",
+                  "id": 1
+                },
+                "can_claim": {
+                  "type": "bool",
+                  "id": 2
+                },
+                "claimed_today": {
+                  "type": "bool",
+                  "id": 3
+                }
+              }
+            },
+            "ClaimDailyGiftRequest": {
+              "fields": {}
+            },
+            "ClaimDailyGiftReply": {
+              "fields": {
+                "rewards": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                }
+              }
+            },
+            "DailyGiftStatusChangedNTF": {
+              "fields": {
+                "is_qq_vip": {
+                  "type": "bool",
+                  "id": 1
+                },
+                "can_claim": {
+                  "type": "bool",
+                  "id": 2
+                },
+                "claimed_today": {
+                  "type": "bool",
+                  "id": 3
+                }
+              }
+            }
+          }
+        },
+        "redpacketpb": {
+          "nested": {
+            "ActivityStatus": {
+              "values": {
+                "UNKNOWN": 0,
+                "NORMAL": 1,
+                "NOT_STARTED": 2,
+                "ENDED": 3,
+                "NOT_UNLOCKED": 4,
+                "LIMIT_REACHED": 5
+              }
+            },
+            "ActivityStatusInfo": {
+              "fields": {
+                "activity_id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "claimed_today": {
+                  "type": "bool",
+                  "id": 2
+                },
+                "status": {
+                  "type": "ActivityStatus",
+                  "id": 3
+                },
+                "act_description": {
+                  "type": "string",
+                  "id": 4
+                },
+                "act_name": {
+                  "type": "string",
+                  "id": 5
+                },
+                "act_time": {
+                  "type": "string",
+                  "id": 6
+                },
+                "act_instructions": {
+                  "type": "string",
+                  "id": 7
+                }
+              }
+            },
+            "GetTodayClaimStatusRequest": {
+              "fields": {
+                "activity_ids": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 1
+                }
+              }
+            },
+            "GetTodayClaimStatusReply": {
+              "fields": {
+                "activities": {
+                  "rule": "repeated",
+                  "type": "ActivityStatusInfo",
+                  "id": 1
+                }
+              }
+            },
+            "GetTodayClaimStatusNotify": {
+              "fields": {
+                "activities": {
+                  "rule": "repeated",
+                  "type": "ActivityStatusInfo",
+                  "id": 1
+                }
+              }
+            },
+            "ClaimRedPacketRequest": {
+              "fields": {
+                "activity_id": {
+                  "type": "int64",
+                  "id": 1
+                }
+              }
+            },
+            "ClaimRedPacketReply": {
+              "fields": {
+                "status": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "item": {
+                  "type": "corepb.Item",
+                  "id": 2
+                }
+              }
+            }
+          }
+        },
+        "mallpb": {
+          "nested": {
+            "MallProfile": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "mall_type": {
+                  "type": "int32",
+                  "id": 2
+                }
+              }
+            },
+            "RestrictionInfo": {
+              "fields": {
+                "type": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "current_count": {
+                  "type": "int64",
+                  "id": 2
+                },
+                "max_count": {
+                  "type": "int64",
+                  "id": 3
+                }
+              }
+            },
+            "ProductInfo": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "name": {
+                  "type": "string",
+                  "id": 2
+                },
+                "slot_type": {
+                  "type": "int32",
+                  "id": 3
+                },
+                "items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 4
+                },
+                "price": {
+                  "type": "corepb.Item",
+                  "id": 5
+                },
+                "is_free": {
+                  "type": "bool",
+                  "id": 6
+                },
+                "restriction": {
+                  "type": "RestrictionInfo",
+                  "id": 7
+                },
+                "is_available_purchase": {
+                  "type": "bool",
+                  "id": 8
+                },
+                "discount": {
+                  "type": "string",
+                  "id": 9
+                }
+              }
+            },
+            "GetMallProfilesRequest": {
+              "fields": {}
+            },
+            "GetMallProfilesReply": {
+              "fields": {
+                "mall_profiles": {
+                  "rule": "repeated",
+                  "type": "MallProfile",
+                  "id": 1
+                }
+              }
+            },
+            "GetMallListBySlotTypeRequest": {
+              "fields": {
+                "slot_type": {
+                  "type": "int32",
+                  "id": 1
+                }
+              }
+            },
+            "GetMallListBySlotTypeReply": {
+              "fields": {
+                "products": {
+                  "rule": "repeated",
+                  "type": "ProductInfo",
+                  "id": 1
+                },
+                "refresh_time": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "PurchaseRequest": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "buy_num": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "PurchaseReply": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "success": {
+                  "type": "bool",
+                  "id": 2
+                },
+                "reward_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 3
+                },
+                "is_first_buy": {
+                  "type": "bool",
+                  "id": 4
+                },
+                "restriction": {
+                  "type": "RestrictionInfo",
+                  "id": 5
+                }
+              }
+            },
+            "MonthCardInfo": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "reward_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 2
+                },
+                "has_reward_items": {
+                  "type": "bool",
+                  "id": 3
+                },
+                "remaining_days": {
+                  "type": "int64",
+                  "id": 4
+                },
+                "count": {
+                  "type": "int64",
+                  "id": 5
+                },
+                "total_count": {
+                  "type": "int64",
+                  "id": 6
+                },
+                "is_active": {
+                  "type": "bool",
+                  "id": 7
+                },
+                "price": {
+                  "type": "int64",
+                  "id": 8
+                },
+                "duration_days": {
+                  "type": "int64",
+                  "id": 9
+                },
+                "pay_product_id": {
+                  "type": "string",
+                  "id": 10
+                },
+                "active_rewards": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 11
+                },
+                "has_active_rewards": {
+                  "type": "bool",
+                  "id": 12
+                },
+                "can_buy": {
+                  "type": "bool",
+                  "id": 13
+                }
+              }
+            },
+            "GetMonthCardInfosRequest": {
+              "fields": {}
+            },
+            "GetMonthCardInfosReply": {
+              "fields": {
+                "month_cards": {
+                  "rule": "repeated",
+                  "type": "MonthCardInfo",
+                  "id": 1
+                },
+                "refresh_time": {
+                  "type": "int64",
+                  "id": 2
+                }
+              }
+            },
+            "ClaimMonthCardRewardRequest": {
+              "fields": {
+                "id": {
+                  "type": "int64",
+                  "id": 1
+                }
+              }
+            },
+            "ClaimMonthCardRewardReply": {
+              "fields": {
+                "reward_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                },
+                "month_card": {
+                  "type": "MonthCardInfo",
+                  "id": 2
+                }
+              }
+            }
+          }
+        },
+        "sharepb": {
+          "nested": {
+            "ShareChannel": {
+              "values": {
+                "UNKNOWN": 0,
+                "PRIVATE": 1,
+                "GROUP": 2,
+                "ZONE": 3
+              }
+            },
+            "ShareInfo": {
+              "fields": {
+                "share_count": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "is_claimed": {
+                  "type": "bool",
+                  "id": 2
+                }
+              }
+            },
+            "CheckCanShareRequest": {
+              "fields": {}
+            },
+            "CheckCanShareReply": {
+              "fields": {
+                "can_share": {
+                  "type": "bool",
+                  "id": 1
+                }
+              }
+            },
+            "ReportShareRequest": {
+              "fields": {
+                "share_id": {
+                  "type": "int64",
+                  "id": 1
+                },
+                "params": {
+                  "rule": "repeated",
+                  "type": "int64",
+                  "id": 2
+                },
+                "channel": {
+                  "type": "ShareChannel",
+                  "id": 3
+                }
+              }
+            },
+            "ReportShareReply": {
+              "fields": {
+                "share_infos": {
+                  "keyType": "int64",
+                  "type": "ShareInfo",
+                  "id": 1
+                }
+              }
+            },
+            "ClaimShareRewardRequest": {
+              "fields": {
+                "share_id": {
+                  "type": "int64",
+                  "id": 1
+                }
+              }
+            },
+            "ClaimShareRewardReply": {
+              "fields": {
+                "rewards": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 1
+                },
+                "share_infos": {
+                  "keyType": "int64",
+                  "type": "ShareInfo",
+                  "id": 2
+                },
+                "compensated_items": {
+                  "rule": "repeated",
+                  "type": "corepb.Item",
+                  "id": 3
                 }
               }
             }

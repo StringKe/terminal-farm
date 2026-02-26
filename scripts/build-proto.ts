@@ -20,6 +20,10 @@ const protoFiles = [
   'emailpb.proto',
   'illustratedpb.proto',
   'weatherpb.proto',
+  'qqvippb.proto',
+  'redpacketpb.proto',
+  'mallpb.proto',
+  'sharepb.proto',
 ].map((f) => join(PROTO_DIR, f))
 
 console.log('编译 proto 文件...')
