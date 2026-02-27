@@ -1,8 +1,8 @@
-import { getItemName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { ScopedLogger } from '../utils/logger.js'
 import { toNum } from '../utils/long.js'
+import { formatRewardName } from '../utils/reward.js'
 import type { TaskScheduler } from './scheduler.js'
 
 export class RedPacketManager {
@@ -60,8 +60,7 @@ export class RedPacketManager {
     if (reply.item) {
       const id = toNum(reply.item.id)
       const count = toNum(reply.item.count)
-      const name = id === 1 ? '金币' : id === 2 ? '经验' : getItemName(id)
-      this.logger.log('红包', `${actName}: ${name} x${count}`)
+      this.logger.log('红包', `${actName}: ${formatRewardName(id)} x${count}`)
     } else {
       this.logger.log('红包', `${actName}: 已领取`)
     }

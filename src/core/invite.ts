@@ -4,8 +4,8 @@ import { paths } from '../config/paths.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { ScopedLogger } from '../utils/logger.js'
-import { sleep } from '../utils/logger.js'
 import { toLong } from '../utils/long.js'
+import { sleep } from '../utils/random.js'
 
 const SHARE_FILE = paths.shareFile
 const INVITE_REQUEST_DELAY = 2000

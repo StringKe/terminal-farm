@@ -35,6 +35,7 @@ export const accountConfigSchema = z.object({
   autoUseGiftPacks: z.boolean().default(true),
   enableHumanMode: z.boolean().default(true),
   humanModeIntensity: z.enum(['low', 'medium', 'high']).default('medium'),
+  helpOnlyWithExp: z.boolean().default(true),
   enableIllustratedUnlock: z.boolean().default(false),
 })
 

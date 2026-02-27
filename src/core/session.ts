@@ -89,7 +89,7 @@ export class Session {
     })
 
     // Restore persisted daily stats
-    this.store.restoreFriendStats()
+    this.store.restoreStats()
 
     // Forward logs to store (only this account's logs)
     this.logUnsub = onLog((entry) => {

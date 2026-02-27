@@ -11,7 +11,7 @@ import { jitteredSleep, shuffleArray } from '../utils/random.js'
 import type { FarmManager } from './farm.js'
 import type { TaskScheduler } from './scheduler.js'
 
-const HELP_ONLY_WITH_EXP = true
+// helpOnlyWithExp 由账号配置控制
 
 export class FriendManager {
   private isChecking = false
@@ -257,7 +257,7 @@ export class FriendManager {
       [10006, status.needBug, (gid: number, ids: number[]) => this.helpInsecticide(gid, ids), '虫'] as const,
       [10007, status.needWater, (gid: number, ids: number[]) => this.helpWater(gid, ids), '水'] as const,
     ]) {
-      if (landIds.length > 0 && (!HELP_ONLY_WITH_EXP || this.canGetExp(opId))) {
+      if (landIds.length > 0 && (!this.getAccountConfig().helpOnlyWithExp || this.canGetExp(opId))) {
         this.markExpCheck(opId)
         let ok = 0
         for (const landId of landIds) {
@@ -328,7 +328,10 @@ export class FriendManager {
       }
       const state = this.conn.userState
       const canHelpWithExp =
-        !HELP_ONLY_WITH_EXP || this.canGetExp(10005) || this.canGetExp(10006) || this.canGetExp(10007)
+        !this.getAccountConfig().helpOnlyWithExp ||
+        this.canGetExp(10005) ||
+        this.canGetExp(10006) ||
+        this.canGetExp(10007)
       const friendsToVisit: { gid: number; name: string }[] = []
       const visitedGids = new Set<number>()
       for (const f of friends) {
@@ -384,11 +387,13 @@ export class FriendManager {
       if (totalActions.放草) summary.push(`放草${totalActions.放草}`)
       if (totalActions.放虫) summary.push(`放虫${totalActions.放虫}`)
       if (summary.length > 0) this.logger.log('好友', `巡查 ${friendsToVisit.length} 人 → ${summary.join('/')}`)
-      this.store.addFriendStats({
-        steal: totalActions.steal || 0,
-        weed: totalActions.草 || 0,
-        bug: totalActions.虫 || 0,
-        water: totalActions.水 || 0,
+      this.store.addStats({
+        friendSteal: totalActions.steal || 0,
+        friendWeed: totalActions.草 || 0,
+        friendBug: totalActions.虫 || 0,
+        friendWater: totalActions.水 || 0,
+        friendPutWeed: totalActions.放草 || 0,
+        friendPutBug: totalActions.放虫 || 0,
       })
     } catch (err: any) {
       this.logger.logWarn('好友', `巡查失败: ${err.message}`)

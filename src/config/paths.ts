@@ -15,6 +15,8 @@ export const paths = {
   loginCode: join(DATA_ROOT, 'code.json'),
   /** 每日统计 */
   dailyStats: join(DATA_ROOT, 'stats.json'),
+  /** 统计历史归档 */
+  statsHistory: join(DATA_ROOT, 'stats-history.json'),
   /** 邀请码文件 */
   shareFile: join(DATA_ROOT, 'share.txt'),
   /** 日志目录 */

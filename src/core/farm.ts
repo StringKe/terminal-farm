@@ -368,9 +368,16 @@ export class FarmManager {
         await this.buyGoods(seed.goodsId, 1, seed.price)
         const planted = await this.plantSeeds(seed.seedId, [illustratedLandId])
         if (planted > 0) {
+          this.store.addStats({ farmPlant: 1 })
           const fertCfg = this.getAccountConfig()
-          if (fertCfg.useNormalFertilizer) await this.fertilize([illustratedLandId])
-          if (fertCfg.useOrganicFertilizer) await this.fertilize([illustratedLandId], ORGANIC_FERTILIZER_ID)
+          if (fertCfg.useNormalFertilizer) {
+            const fc = await this.fertilize([illustratedLandId])
+            if (fc > 0) this.store.addStats({ farmFertilize: fc })
+          }
+          if (fertCfg.useOrganicFertilizer) {
+            const fc = await this.fertilize([illustratedLandId], ORGANIC_FERTILIZER_ID)
+            if (fc > 0) this.store.addStats({ farmFertilize: fc })
+          }
         }
       } catch (e: any) {
         this.logger.logWarn('图鉴', `图鉴种植失败: ${e.message}`)
@@ -427,7 +434,10 @@ export class FarmManager {
     try {
       const planted = await this.plantSeeds(actualSeedId, toBuy)
       this.logger.log('种植', `已种${planted}块 (${toBuy.join(',')})`)
-      if (planted > 0) plantedLands = toBuy.slice(0, planted)
+      if (planted > 0) {
+        plantedLands = toBuy.slice(0, planted)
+        this.store.addStats({ farmPlant: planted })
+      }
     } catch (e: any) {
       this.logger.logWarn('种植', e.message)
     }
@@ -435,11 +445,17 @@ export class FarmManager {
       const fertCfg = this.getAccountConfig()
       if (fertCfg.useNormalFertilizer) {
         const fertilized = await this.fertilize(plantedLands)
-        if (fertilized > 0) this.logger.log('施肥', `普通 ${fertilized}/${plantedLands.length}块`)
+        if (fertilized > 0) {
+          this.logger.log('施肥', `普通 ${fertilized}/${plantedLands.length}块`)
+          this.store.addStats({ farmFertilize: fertilized })
+        }
       }
       if (fertCfg.useOrganicFertilizer) {
         const orgFert = await this.fertilize(plantedLands, ORGANIC_FERTILIZER_ID)
-        if (orgFert > 0) this.logger.log('施肥', `有机 ${orgFert}/${plantedLands.length}块`)
+        if (orgFert > 0) {
+          this.logger.log('施肥', `有机 ${orgFert}/${plantedLands.length}块`)
+          this.store.addStats({ farmFertilize: orgFert })
+        }
       }
     }
   }
@@ -561,6 +577,9 @@ export class FarmManager {
         try {
           await op.fn()
           actions.push(op.label)
+          if (op.warn === '除草') this.store.addStats({ farmWeed: status.needWeed.length })
+          else if (op.warn === '除虫') this.store.addStats({ farmBug: status.needBug.length })
+          else if (op.warn === '浇水') this.store.addStats({ farmWater: status.needWater.length })
         } catch (e: any) {
           this.logger.logWarn(op.warn, e.message)
         }
@@ -572,6 +591,7 @@ export class FarmManager {
           await this.harvest(status.harvestable)
           actions.push(`收获${status.harvestable.length}`)
           harvestedLandIds = [...status.harvestable]
+          this.store.addStats({ farmHarvest: status.harvestable.length })
         } catch (e: any) {
           this.logger.logWarn('收获', e.message)
         }

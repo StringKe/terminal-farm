@@ -1,6 +1,7 @@
 import { Box, Text } from 'ink'
 import { LAND_LEVEL_COLORS, LAND_LEVEL_NAMES, PlantPhase } from '../../config/constants.js'
 import { getPlantName } from '../../config/game-data.js'
+import { chunk } from '../../utils/array.js'
 import { toNum } from '../../utils/long.js'
 import { getServerTimeSec, toTimeSec } from '../../utils/time.js'
 import { PanelBox } from '../components/panel-box.js'
@@ -196,14 +197,6 @@ function joinNodes(nodes: React.ReactNode[], sep: string): React.ReactNode[] {
   for (let i = 0; i < nodes.length; i++) {
     if (i > 0) result.push(sep)
     result.push(nodes[i])
-  }
-  return result
-}
-
-function chunk<T>(arr: T[], size: number): T[][] {
-  const result: T[][] = []
-  for (let i = 0; i < arr.length; i += size) {
-    result.push(arr.slice(i, i + size))
   }
   return result
 }

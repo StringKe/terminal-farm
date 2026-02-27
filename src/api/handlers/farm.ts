@@ -11,6 +11,9 @@ export async function handleFarmStatus(body: any): Promise<Response> {
     data: {
       lands: store.state.lands,
       user: store.state.user,
+      bag: store.state.bag,
+      weather: store.state.weather,
+      schedulerStatus: store.state.schedulerStatus,
     },
   })
 }

@@ -153,10 +153,6 @@ export function getAllPlants(): PlantConfig[] {
   return result
 }
 
-export function getPlantBySeedId(seedId: number): PlantConfig | undefined {
-  return seedToPlant.get(seedId)
-}
-
 export function getSeedUnlockLevel(seedId: number): number {
   return seedItemMap.get(seedId)?.level ?? 1
 }

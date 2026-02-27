@@ -1,8 +1,8 @@
-import { getItemName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { ScopedLogger } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
+import { formatRewards } from '../utils/reward.js'
 import type { TaskScheduler } from './scheduler.js'
 
 export class MallManager {
@@ -81,16 +81,7 @@ export class MallManager {
     const reply = types.PurchaseReply.decode(replyBody) as any
     const rewards = reply.reward_items || []
     if (rewards.length > 0) {
-      const summary = rewards
-        .map((r: any) => {
-          const id = toNum(r.id)
-          const count = toNum(r.count)
-          if (id === 1) return `金币${count}`
-          if (id === 2) return `经验${count}`
-          return `${getItemName(id)}(${id})x${count}`
-        })
-        .join('/')
-      this.logger.log('商城', `${productName}: ${summary}`)
+      this.logger.log('商城', `${productName}: ${formatRewards(rewards)}`)
     } else {
       this.logger.log('商城', `${productName}: 已领取`)
     }
@@ -133,16 +124,7 @@ export class MallManager {
     const reply = types.ClaimMonthCardRewardReply.decode(replyBody) as any
     const rewards = reply.reward_items || []
     if (rewards.length > 0) {
-      const summary = rewards
-        .map((r: any) => {
-          const id = toNum(r.id)
-          const count = toNum(r.count)
-          if (id === 1) return `金币${count}`
-          if (id === 2) return `经验${count}`
-          return `${getItemName(id)}(${id})x${count}`
-        })
-        .join('/')
-      this.logger.log('月卡', `月卡${cardId} 每日奖励: ${summary}`)
+      this.logger.log('月卡', `月卡${cardId} 每日奖励: ${formatRewards(rewards)}`)
     }
   }
 
@@ -201,16 +183,7 @@ export class MallManager {
       const reply = types.ClaimShareRewardReply.decode(replyBody) as any
       const rewards = reply.rewards || []
       if (rewards.length > 0) {
-        const summary = rewards
-          .map((r: any) => {
-            const id = toNum(r.id)
-            const count = toNum(r.count)
-            if (id === 1) return `金币${count}`
-            if (id === 2) return `经验${count}`
-            return `${getItemName(id)}(${id})x${count}`
-          })
-          .join('/')
-        this.logger.log('分享', `领取分享奖励: ${summary}`)
+        this.logger.log('分享', `领取分享奖励: ${formatRewards(rewards)}`)
       } else {
         this.logger.log('分享', '已领取分享奖励')
       }

@@ -112,10 +112,6 @@ export function onLog(fn: LogListener): () => void {
   return () => listeners.delete(fn)
 }
 
-export function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms))
-}
-
 // Runtime hint
 let hintPrinted = false
 export async function emitRuntimeHint(force = false): Promise<void> {
@@ -126,11 +122,4 @@ export async function emitRuntimeHint(force = false): Promise<void> {
   }
   log('声明', decodeRuntimeHint())
   hintPrinted = true
-}
-
-export function cleanupLogger(): void {
-  if (stream) {
-    stream.end()
-    stream = null
-  }
 }

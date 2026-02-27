@@ -31,9 +31,16 @@ QQ/微信农场自动化挂机工具 -- 全屏终端 UI + 多账号 + HTTP API
 - **好友巡查** -- 自动访问好友农场，帮忙浇水/除草/除虫
 - **自动偷菜** -- 发现可偷的成熟作物自动采摘
 - **放虫放草** -- 可选开启对好友农场放虫/放草（默认关闭）
-- **每日统计** -- 持久化记录偷菜/浇水/除草/除虫次数
+- **仅限有经验时帮助** -- 可选开关，关闭后即使无经验也会帮助好友（默认开启）
 - **操作限制追踪** -- 自动跟踪每日操作次数和经验上限，耗尽后停止
 - **好友申请** -- 自动接受好友申请（含推送触发）
+
+### 操作统计
+
+- **12 维指标** -- 自家（除草/除虫/浇水/收获/种植/施肥）+ 好友（除草/除虫/浇水/偷菜/放草/放虫）
+- **多时间维度** -- 今日 / 本周 / 本月 / 累计，`[`/`]` 键实时切换
+- **历史归档** -- 跨日自动归档到 `data/stats-history.json`，支持累计聚合
+- **启动恢复** -- 重启后自动从 `data/stats.json` 恢复当日数据
 
 ### 每日奖励自动领取
 
@@ -118,6 +125,7 @@ bun run src/main.ts --code <code> --wx
 | `Tab` / `Shift+Tab` | 下/上一个账号 |
 | `←` / `→` | 切换账号 |
 | `↑` / `↓` | 滚动日志 |
+| `[` / `]` | 切换统计视图（今日/本周/本月/累计） |
 | `+` | 添加新账号 |
 | `S` | 打开/关闭账号设置面板 |
 | `Q` / `Ctrl+C` | 退出 |
@@ -136,6 +144,7 @@ bun run src/main.ts --code <code> --wx
 | `autoRefillNormalFertilizer` | bool | `false` | 普通肥不足时自动补充 |
 | `useOrganicFertilizer` | bool | `false` | 额外施有机肥 |
 | `autoRefillOrganicFertilizer` | bool | `false` | 有机肥不足时自动补充 |
+| `helpOnlyWithExp` | bool | `true` | 帮好友仅限有经验时（关闭后无经验也帮） |
 | `enablePutBadThings` | bool | `false` | 对好友农场放虫/放草 |
 | `autoClaimFreeGifts` | bool | `true` | 自动领取商店免费礼包 |
 | `autoUseGiftPacks` | bool | `true` | 自动使用礼包类物品 |
@@ -151,7 +160,7 @@ bun run src/main.ts --code <code> --wx
 | **农场** | 地块网格（作物名称、生长进度条、倒计时、缺水/有草/有虫/突变标记） |
 | **背包** | 前 10 种物品及数量 |
 | **任务** | 可领取/已完成/总数，前 3 条任务预览 |
-| **好友** | 好友列表（有操作/无操作分区显示）+ 每日偷菜/浇水/除草/除虫统计 |
+| **好友** | 好友列表（有操作/无操作分区）+ 自家/好友双行 12 维统计 + 视图切换 |
 | **日志** | 最近操作日志（可滚动），本机时间 + 游戏时间标题 |
 | **设置** | 账号独立配置编辑器（↑↓ 选择，Enter/空格 切换） |
 
@@ -164,13 +173,15 @@ bun run src/main.ts --code <code> --wx
 | `POST /account/list` | 账号列表 |
 | `POST /account/add` | 添加账号 `{platform, code}` |
 | `POST /account/remove` | 移除账号 `{id}` |
-| `POST /farm/status` | 农场状态 `{accountId}` |
-| `POST /farm/harvest` | 触发收获 `{accountId}` |
+| `POST /farm/status` | 农场状态（土地+用户+背包+天气+调度器）`{accountId}` |
+| `POST /farm/harvest` | 触发巡田 `{accountId}` |
 | `POST /farm/replant` | 触发换种 `{accountId}` |
-| `POST /friend/list` | 好友列表+统计 `{accountId}` |
+| `POST /friend/list` | 好友列表+巡查进度+统计（含 12 维指标）`{accountId}` |
 | `POST /friend/patrol` | 触发好友巡查 `{accountId}` |
+| `POST /stats/summary` | 统计聚合（今日/本周/本月/累计）`{accountId}` |
+| `POST /stats/history` | 统计历史记录 |
 | `POST /system/logs` | 查看日志 `{limit, offset}` |
-| `POST /system/config` | 当前配置 |
+| `POST /system/config` | 当前运行时配置 |
 | `POST /system/version` | 版本信息 |
 | `GET /swagger` | Swagger UI |
 | `GET /openapi.json` | OpenAPI 3.0 规范 |
@@ -221,7 +232,8 @@ game-config/               # 静态游戏数据 (Plant.json, RoleLevel.json, Ite
 data/                      # 运行时数据（gitignore）
 ├── accounts/{gid}.json    # 账号独立配置
 ├── code.json              # QQ 登录码持久化
-├── stats.json             # 每日统计
+├── stats.json             # 当日统计（12 维指标）
+├── stats-history.json     # 统计历史归档（跨日自动追加）
 ├── share.txt              # 微信邀请码
 ├── logs/YYYY-MM-DD.log    # 日志（每日轮转）
 └── dumps/                 # WebSocket 消息 dump

@@ -1,8 +1,7 @@
-import { getItemName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { ScopedLogger } from '../utils/logger.js'
-import { toNum } from '../utils/long.js'
+import { formatRewards } from '../utils/reward.js'
 import type { TaskScheduler } from './scheduler.js'
 
 export class IllustratedManager {
@@ -66,16 +65,7 @@ export class IllustratedManager {
       const reply = types.ClaimAllRewardsV2Reply.decode(replyBody) as any
       const rewards = reply.total_rewards || []
       if (rewards.length > 0) {
-        const summary = rewards
-          .map((r: any) => {
-            const id = toNum(r.id)
-            const count = toNum(r.count)
-            if (id === 1) return `金币${count}`
-            if (id === 2) return `经验${count}`
-            return `${getItemName(id)}(${id})x${count}`
-          })
-          .join('/')
-        this.logger.log('图鉴', `领取奖励: ${summary}`)
+        this.logger.log('图鉴', `领取奖励: ${formatRewards(rewards)}`)
       }
     } catch (e: any) {
       this.logger.logWarn('图鉴', `领取图鉴奖励失败: ${e.message}`)

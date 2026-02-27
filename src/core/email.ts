@@ -1,8 +1,7 @@
-import { getItemName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { ScopedLogger } from '../utils/logger.js'
-import { toNum } from '../utils/long.js'
+import { formatRewards } from '../utils/reward.js'
 import type { TaskScheduler } from './scheduler.js'
 
 const EMAIL_TYPE_SYSTEM = 1
@@ -46,16 +45,7 @@ export class EmailManager {
       const reply = types.BatchClaimEmailReply.decode(replyBody) as any
       const rewards = reply.rewards || []
       if (rewards.length > 0) {
-        const summary = rewards
-          .map((r: any) => {
-            const id = toNum(r.id)
-            const count = toNum(r.count)
-            if (id === 1) return `金币${count}`
-            if (id === 2) return `经验${count}`
-            return `${getItemName(id)}(${id})x${count}`
-          })
-          .join('/')
-        this.logger.log('邮件', `领取 ${emailIds.length} 封邮件奖励: ${summary}`)
+        this.logger.log('邮件', `领取 ${emailIds.length} 封邮件奖励: ${formatRewards(rewards)}`)
       } else {
         this.logger.log('邮件', `已领取 ${emailIds.length} 封邮件`)
       }

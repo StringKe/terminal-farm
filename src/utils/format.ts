@@ -3,7 +3,14 @@ function pad2(n: number): string {
 }
 
 /** 获取中国时间 (UTC+8) 的 Date 各分量 */
-function getChinaTime(d = new Date()): { year: number; month: number; day: number; h: number; m: number; s: number } {
+export function getChinaTime(d = new Date()): {
+  year: number
+  month: number
+  day: number
+  h: number
+  m: number
+  s: number
+} {
   const utcMs = d.getTime() + d.getTimezoneOffset() * 60_000
   const cn = new Date(utcMs + 8 * 3600_000)
   return {
@@ -37,8 +44,4 @@ export function getChinaTimeStr(d = new Date()): string {
 /** 本机时间时分秒 (HH:mm:ss) */
 export function getLocalTimeStr(d = new Date()): string {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
-}
-
-export function formatNumber(n: number): string {
-  return n.toLocaleString('en-US')
 }

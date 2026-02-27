@@ -7,6 +7,7 @@ interface KeyboardActions {
   onScrollLog?: (delta: number) => void
   onAddAccount?: () => void
   onToggleSettings?: () => void
+  onCycleStatsView?: (direction: 1 | -1) => void
   onQuit?: () => void
 }
 
@@ -45,6 +46,16 @@ export function useKeyboard(actions: KeyboardActions): void {
     // Add account
     if (input === '+' || input === '=') {
       actions.onAddAccount?.()
+      return
+    }
+
+    // Cycle stats view
+    if (input === '[') {
+      actions.onCycleStatsView?.(-1)
+      return
+    }
+    if (input === ']') {
+      actions.onCycleStatsView?.(1)
       return
     }
 

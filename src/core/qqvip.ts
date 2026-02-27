@@ -1,8 +1,7 @@
-import { getItemName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { ScopedLogger } from '../utils/logger.js'
-import { toNum } from '../utils/long.js'
+import { formatRewards } from '../utils/reward.js'
 import type { TaskScheduler } from './scheduler.js'
 
 export class QQVipManager {
@@ -40,16 +39,7 @@ export class QQVipManager {
       const reply = types.ClaimDailyGiftReply.decode(replyBody) as any
       const rewards = reply.rewards || []
       if (rewards.length > 0) {
-        const summary = rewards
-          .map((r: any) => {
-            const id = toNum(r.id)
-            const count = toNum(r.count)
-            if (id === 1) return `金币${count}`
-            if (id === 2) return `经验${count}`
-            return `${getItemName(id)}(${id})x${count}`
-          })
-          .join('/')
-        this.logger.log('会员', `领取每日礼包: ${summary}`)
+        this.logger.log('会员', `领取每日礼包: ${formatRewards(rewards)}`)
       } else {
         this.logger.log('会员', '已领取每日礼包')
       }

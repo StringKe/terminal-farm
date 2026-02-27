@@ -1,7 +1,16 @@
 import { EventEmitter } from 'node:events'
-import type { OperationLimit, UserState } from '../protocol/types.js'
+import type { UserState } from '../protocol/types.js'
+import { getDateKey } from '../utils/format.js'
 import type { LogEntry } from '../utils/logger.js'
-import { loadDailyStats, saveDailyStats } from './persist.js'
+import {
+  type DailyStats,
+  STATS_VIEW_MODES,
+  type StatsViewMode,
+  appendToHistory,
+  emptyDailyStats,
+  loadTodayStats,
+  saveTodayStats,
+} from './stats.js'
 
 export interface FriendInfo {
   gid: number
@@ -43,9 +52,10 @@ export interface SessionState {
   friendPatrolProgress: { current: number; total: number }
   friendTotal: number
   friendStats: { steal: number; weed: number; bug: number; water: number }
+  dailyStats: DailyStats
+  statsViewMode: StatsViewMode
   friendList: FriendInfo[]
   taskList: TaskInfo[]
-  operationLimits: Map<number, OperationLimit>
   weather: WeatherInfo | null
   schedulerStatus: SchedulerStatusInfo | null
 }
@@ -61,9 +71,10 @@ export class SessionStore extends EventEmitter {
     friendPatrolProgress: { current: 0, total: 0 },
     friendTotal: 0,
     friendStats: { steal: 0, weed: 0, bug: 0, water: 0 },
+    dailyStats: emptyDailyStats(),
+    statsViewMode: 'today' as StatsViewMode,
     friendList: [],
     taskList: [],
-    operationLimits: new Map(),
     weather: null,
     schedulerStatus: null,
   }
@@ -104,23 +115,54 @@ export class SessionStore extends EventEmitter {
     this.emit('change', 'friendPatrol')
   }
 
-  /** 累加好友统计（本轮巡查增量），并持久化到文件 */
-  addFriendStats(delta: Partial<SessionState['friendStats']>): void {
-    if (delta.steal) this.state.friendStats.steal += delta.steal
-    if (delta.weed) this.state.friendStats.weed += delta.weed
-    if (delta.bug) this.state.friendStats.bug += delta.bug
-    if (delta.water) this.state.friendStats.water += delta.water
-    saveDailyStats(this.state.friendStats)
+  private lastStatsDate = ''
+
+  /** 累加统计（支持全部 12 个指标），自动跨日归档 */
+  addStats(delta: Partial<DailyStats>): void {
+    const today = getDateKey()
+    if (this.lastStatsDate && this.lastStatsDate !== today) {
+      appendToHistory({ date: this.lastStatsDate, stats: { ...this.state.dailyStats } })
+      this.state.dailyStats = emptyDailyStats()
+      this.state.friendStats = { steal: 0, weed: 0, bug: 0, water: 0 }
+    }
+    this.lastStatsDate = today
+
+    for (const key of Object.keys(delta) as (keyof DailyStats)[]) {
+      if (delta[key]) this.state.dailyStats[key] += delta[key]!
+    }
+
+    // 同步旧 friendStats 字段
+    this.state.friendStats.steal = this.state.dailyStats.friendSteal
+    this.state.friendStats.weed = this.state.dailyStats.friendWeed
+    this.state.friendStats.bug = this.state.dailyStats.friendBug
+    this.state.friendStats.water = this.state.dailyStats.friendWater
+
+    saveTodayStats(today, this.state.dailyStats)
+    this.emit('change', 'dailyStats')
     this.emit('change', 'friendStats')
   }
 
   /** 从持久化文件恢复当日统计 */
-  restoreFriendStats(): void {
-    const saved = loadDailyStats()
+  restoreStats(): void {
+    const saved = loadTodayStats()
     if (saved) {
-      Object.assign(this.state.friendStats, saved)
+      this.state.dailyStats = saved.stats
+      this.lastStatsDate = saved.date
+      this.state.friendStats.steal = saved.stats.friendSteal
+      this.state.friendStats.weed = saved.stats.friendWeed
+      this.state.friendStats.bug = saved.stats.friendBug
+      this.state.friendStats.water = saved.stats.friendWater
+      this.emit('change', 'dailyStats')
       this.emit('change', 'friendStats')
     }
+  }
+
+  /** 切换统计视图模式 */
+  cycleStatsView(direction: 1 | -1): void {
+    const idx = STATS_VIEW_MODES.indexOf(this.state.statsViewMode)
+    const next = (idx + direction + STATS_VIEW_MODES.length) % STATS_VIEW_MODES.length
+    this.state.statsViewMode = STATS_VIEW_MODES[next]
+    this.emit('change', 'statsViewMode')
   }
 
   updateFriendList(list: FriendInfo[], total?: number): void {
@@ -142,19 +184,9 @@ export class SessionStore extends EventEmitter {
     this.emit('change', 'taskList')
   }
 
-  resetFriendStats(): void {
-    this.state.friendStats = { steal: 0, weed: 0, bug: 0, water: 0 }
-    this.emit('change', 'friendStats')
-  }
-
   updateWeather(weather: WeatherInfo): void {
     this.state.weather = weather
     this.emit('change', 'weather')
-  }
-
-  updateOperationLimit(limit: OperationLimit): void {
-    this.state.operationLimits.set(limit.id, limit)
-    this.emit('change', 'operationLimits')
   }
 
   updateSchedulerStatus(status: SchedulerStatusInfo): void {

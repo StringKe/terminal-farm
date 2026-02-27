@@ -1,29 +1,30 @@
 import { Box, Text } from 'ink'
 import type { FriendInfo } from '../../store/session-store.js'
+import { type DailyStats, STATS_VIEW_LABELS, type StatsViewMode, aggregateStats } from '../../store/stats.js'
+import { chunk } from '../../utils/array.js'
 import { padEndCJK } from '../../utils/string-width.js'
 import { PanelBox } from '../components/panel-box.js'
 
 const ACTIVE_COL_WIDTH = 32
 const INACTIVE_COL_WIDTH = 14
 
-function chunk<T>(arr: T[], size: number): T[][] {
-  const result: T[][] = []
-  for (let i = 0; i < arr.length; i += size) {
-    result.push(arr.slice(i, i + size))
-  }
-  return result
-}
-
 interface FriendPanelProps {
   progress: { current: number; total: number }
   friendTotal: number
-  stats: { steal: number; weed: number; bug: number; water: number }
+  dailyStats: DailyStats
+  statsViewMode: StatsViewMode
   friendList: FriendInfo[]
   columns?: number
 }
 
-export function FriendPanel({ progress, friendTotal, stats, friendList, columns = 80 }: FriendPanelProps) {
-  const helpTotal = stats.weed + stats.bug + stats.water
+export function FriendPanel({
+  progress,
+  friendTotal,
+  dailyStats,
+  statsViewMode,
+  friendList,
+  columns = 80,
+}: FriendPanelProps) {
   const patrolStr = progress.total > 0 ? `巡查 ${progress.current}/${progress.total}` : '待巡查'
 
   const active = friendList.filter((f) => f.actions.length > 0)
@@ -43,15 +44,38 @@ export function FriendPanel({ progress, friendTotal, stats, friendList, columns 
   const displayInactive = inactive.slice(0, maxInactiveDisplay)
   const inactiveRows = chunk(displayInactive, inactiveCols)
 
+  const viewStats = statsViewMode === 'today' ? dailyStats : aggregateStats(statsViewMode, dailyStats)
+  const viewLabel = STATS_VIEW_LABELS[statsViewMode]
+
   return (
     <PanelBox title={`好友 (${friendTotal}人) ${patrolStr}`}>
-      <Box gap={2}>
-        <Text>
-          今日 <Text color="yellow">除草{stats.weed}</Text> <Text color="magenta">除虫{stats.bug}</Text>{' '}
-          <Text color="cyan">浇水{stats.water}</Text> <Text color="red">偷菜{stats.steal}</Text>
-          {'  '}
-          <Text dimColor>帮:{helpTotal}</Text>
-        </Text>
+      <Box flexDirection="column">
+        <Box>
+          <Text>
+            <Text dimColor>自家</Text>
+            {'  '}
+            <Text color="yellow">草{viewStats.farmWeed}</Text> <Text color="magenta">虫{viewStats.farmBug}</Text>{' '}
+            <Text color="cyan">水{viewStats.farmWater}</Text> <Text color="green">收{viewStats.farmHarvest}</Text>{' '}
+            <Text color="blue">种{viewStats.farmPlant}</Text> <Text color="white">肥{viewStats.farmFertilize}</Text>
+          </Text>
+        </Box>
+        <Box justifyContent="space-between">
+          <Text>
+            <Text dimColor>好友</Text>
+            {'  '}
+            <Text color="yellow">草{viewStats.friendWeed}</Text> <Text color="magenta">虫{viewStats.friendBug}</Text>{' '}
+            <Text color="cyan">水{viewStats.friendWater}</Text> <Text color="red">偷{viewStats.friendSteal}</Text>{' '}
+            <Text color="yellow" dimColor>
+              放草{viewStats.friendPutWeed}
+            </Text>{' '}
+            <Text color="magenta" dimColor>
+              放虫{viewStats.friendPutBug}
+            </Text>
+          </Text>
+          <Text dimColor>
+            {'◀'} {viewLabel} {'▶'}
+          </Text>
+        </Box>
       </Box>
       {activeRows.length > 0 && (
         <Box flexDirection="column" marginTop={1}>

@@ -9,9 +9,11 @@ export async function handleFriendList(body: any): Promise<Response> {
   return Response.json({
     ok: true,
     data: {
-      friends: store.state.friends,
+      friendList: store.state.friendList,
+      friendTotal: store.state.friendTotal,
       progress: store.state.friendPatrolProgress,
       stats: store.state.friendStats,
+      dailyStats: store.state.dailyStats,
     },
   })
 }

@@ -80,6 +80,12 @@ export function Dashboard({
     onScrollLog: showSettings ? undefined : onScrollLog,
     onAddAccount: showSettings ? undefined : onAddAccount,
     onToggleSettings: showSettings ? undefined : handleToggleSettings,
+    onCycleStatsView: showSettings
+      ? undefined
+      : (direction: 1 | -1) => {
+          if (direction === 1) handleCycleStatsView()
+          else handleCycleStatsViewBack()
+        },
     onQuit: showSettings ? undefined : onQuit,
   })
 
@@ -91,11 +97,20 @@ export function Dashboard({
     )
   }
 
+  const handleCycleStatsView = useCallback(() => {
+    if (sessionStore) sessionStore.cycleStatsView(1)
+  }, [sessionStore])
+
+  const handleCycleStatsViewBack = useCallback(() => {
+    if (sessionStore) sessionStore.cycleStatsView(-1)
+  }, [sessionStore])
+
   const friendPanel = (
     <FriendPanel
       progress={state.friendPatrolProgress}
       friendTotal={state.friendTotal}
-      stats={state.friendStats}
+      dailyStats={state.dailyStats}
+      statsViewMode={state.statsViewMode}
       friendList={state.friendList}
       columns={columns}
     />

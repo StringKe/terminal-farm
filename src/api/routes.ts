@@ -1,6 +1,7 @@
 import { handleAccountAdd, handleAccountList, handleAccountRemove } from './handlers/account.js'
 import { handleFarmHarvest, handleFarmReplant, handleFarmStatus } from './handlers/farm.js'
 import { handleFriendList, handleFriendPatrol } from './handlers/friend.js'
+import { handleStatsHistory, handleStatsSummary } from './handlers/stats.js'
 import { handleSystemConfig, handleSystemLogs, handleSystemVersion } from './handlers/system.js'
 import { handleOpenAPISpec, handleSwagger } from './swagger.js'
 
@@ -15,6 +16,8 @@ const routes: Record<string, RouteHandler> = {
   'POST /farm/replant': handleFarmReplant,
   'POST /friend/list': handleFriendList,
   'POST /friend/patrol': handleFriendPatrol,
+  'POST /stats/summary': handleStatsSummary,
+  'POST /stats/history': handleStatsHistory,
   'POST /system/logs': handleSystemLogs,
   'POST /system/config': handleSystemConfig,
   'POST /system/version': handleSystemVersion,

@@ -1,3 +1,8 @@
+/** 简单 sleep */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
 /** 在 [min, max] 范围内生成随机整数 */
 export function randomBetween(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min

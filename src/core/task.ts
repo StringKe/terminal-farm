@@ -1,10 +1,10 @@
-import { getItemName } from '../config/game-data.js'
 import type { Connection } from '../protocol/connection.js'
 import { types } from '../protocol/proto-loader.js'
 import type { SessionStore } from '../store/session-store.js'
 import type { ScopedLogger } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 import { jitteredSleep } from '../utils/random.js'
+import { formatRewards } from '../utils/reward.js'
 import type { TaskScheduler } from './scheduler.js'
 
 export class TaskManager {
@@ -45,18 +45,6 @@ export class TaskManager {
       }
     }
     return claimable
-  }
-
-  private getRewardSummary(items: any[]): string {
-    const summary: string[] = []
-    for (const item of items) {
-      const id = toNum(item.id)
-      const count = toNum(item.count)
-      if (id === 1) summary.push(`金币${count}`)
-      else if (id === 2) summary.push(`经验${count}`)
-      else summary.push(`${getItemName(id)}(${id})x${count}`)
-    }
-    return summary.join('/')
   }
 
   async claimDailyReward(type: number, pointIds: number[]): Promise<any> {
@@ -103,7 +91,7 @@ export class TaskManager {
         const reply = (await this.claimDailyReward(activeType, pointIds)) as any
         const items = reply.items || []
         if (items.length > 0) {
-          const rewardStr = this.getRewardSummary(items)
+          const rewardStr = formatRewards(items)
           this.logger.log('活跃', `${typeName} 领取: ${rewardStr}`)
         }
       } catch (e: any) {
@@ -119,7 +107,7 @@ export class TaskManager {
         const multipleStr = useShare ? ` (${task.shareMultiple}倍)` : ''
         const claimReply = (await this.claimTaskReward(task.id, useShare)) as any
         const items = claimReply.items || []
-        const rewardStr = items.length > 0 ? this.getRewardSummary(items) : '无'
+        const rewardStr = items.length > 0 ? formatRewards(items) : '无'
         this.logger.log('任务', `领取: ${task.desc}${multipleStr} → ${rewardStr}`)
         await jitteredSleep(300, this.scheduler.jitterRatio)
       } catch (e: any) {
