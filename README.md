@@ -1,6 +1,6 @@
 # terminal-farm
 
-QQ/微信农场自动化挂机工具 -- 全屏终端 UI + 多账号 + HTTP API
+QQ/微信农场自动化挂机工具 -- 全屏终端 UI + 多账号 + HTTP API + Docker
 
 > 基于 [qq-farm-bot](https://github.com/linguo2625469/qq-farm-bot) 重构
 
@@ -13,6 +13,14 @@ QQ/微信农场自动化挂机工具 -- 全屏终端 UI + 多账号 + HTTP API
 - 内置拟人模式可降低但无法消除风险
 - **强烈建议不要在主力/重要账号上使用**
 - 作者不对因使用本工具造成的任何损失负责
+
+> **严禁将本项目用于任何形式的商业盈利活动：**
+
+- **严禁**基于本项目搭建付费代挂服务、收费 SaaS 平台或任何形式的盈利性服务
+- **严禁**以本项目为基础向他人收取费用，包括但不限于代挂费、会员费、订阅费
+- **严禁**将本项目的 API、Docker 镜像或衍生产品用于商业运营
+- 违反上述条款的行为，作者保留追究法律责任的权利
+- 本项目仅供个人学习和研究使用，发现商业化滥用将立即停止维护并关闭仓库
 
 ## 特性
 
@@ -29,7 +37,8 @@ QQ/微信农场自动化挂机工具 -- 全屏终端 UI + 多账号 + HTTP API
 ### 好友系统
 
 - **好友巡查** -- 自动访问好友农场，帮忙浇水/除草/除虫
-- **自动偷菜** -- 发现可偷的成熟作物自动采摘
+- **自动偷菜** -- 发现可偷的成熟作物自动采摘（可关闭）
+- **帮好友** -- 自动除草/除虫/浇水（可关闭）
 - **放虫放草** -- 可选开启对好友农场放虫/放草（默认关闭）
 - **仅限有经验时帮助** -- 可选开关，关闭后即使无经验也会帮助好友（默认开启）
 - **操作限制追踪** -- 自动跟踪每日操作次数和经验上限，耗尽后停止
@@ -77,15 +86,18 @@ QQ/微信农场自动化挂机工具 -- 全屏终端 UI + 多账号 + HTTP API
 ### 平台与架构
 
 - **全屏终端 UI** -- Ink (React CLI) 驱动，响应式布局
+- **Headless 模式** -- 无 UI 纯 API 服务，适合 Docker / 服务器部署
 - **多账号** -- 每账号独立 WebSocket 连接、Store、调度器
 - **账号独立配置** -- 每账号可独立设置种子、换种模式、施肥策略等，实时 UI 调整
 - **双平台** -- QQ（扫码 + code 复用）/ 微信（一次性 code）
-- **HTTP API** -- RESTful 接口 + Swagger UI，可选启用
+- **HTTP API** -- RESTful 接口 + Swagger UI + Bearer Token 鉴权
 - **服务器推送** -- 实时响应土地变化/升级/任务完成/新邮件/图鉴红点/红包状态等推送
 - **断线重连** -- 自动检测连接超时，最多 3 次重连尝试
 - **中国时间** -- 所有每日重置判断基于 UTC+8，UI 同时显示本机时间和游戏时间
 
 ## 快速开始
+
+### 本地运行（终端 UI）
 
 ```bash
 # 安装 Bun
@@ -104,6 +116,42 @@ bun run src/main.ts --code <code>
 bun run src/main.ts --code <code> --wx
 ```
 
+### Docker 部署（Headless API）
+
+```bash
+# 使用已有 code 启动
+docker run -d \
+  --name terminal-farm \
+  -p 3000:3000 \
+  -v ./data:/app/data \
+  ghcr.io/stringke/terminal-farm \
+  --code <CODE> --api-key <SECRET>
+
+# 无 code 启动，通过 API 扫码登录
+docker run -d \
+  --name terminal-farm \
+  -p 3000:3000 \
+  -v ./data:/app/data \
+  ghcr.io/stringke/terminal-farm \
+  --api-key <SECRET>
+```
+
+Docker 镜像支持 `linux/amd64` 和 `linux/arm64` 双架构，每次推送 main 分支自动构建。
+
+### Docker Compose
+
+```yaml
+services:
+  terminal-farm:
+    image: ghcr.io/stringke/terminal-farm:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    command: ["--code", "<CODE>", "--api-key", "<SECRET>"]
+```
+
 ## CLI 参数
 
 | 参数 | 说明 | 默认值 |
@@ -115,7 +163,12 @@ bun run src/main.ts --code <code> --wx
 | `--friend-interval <秒>` | 好友巡查间隔 | `10` |
 | `--api` | 启用 HTTP API | 关闭 |
 | `--api-port <端口>` | API 端口 | `3000` |
+| `--api-host <地址>` | API 绑定地址 | `127.0.0.1` |
+| `--api-key <密钥>` | API 鉴权密钥（设置后所有请求需 Bearer Token） | 无（不鉴权） |
+| `--headless` | 无 UI 模式，仅启动核心逻辑 + API 服务 | 关闭 |
 | `--verify` | 验证 proto 加载后退出 | -- |
+
+Headless 模式会强制启用 API 服务。未提供 `--code` 且无保存的登录态时，进程会保持运行并等待通过 API 登录。
 
 ## 键盘操作
 
@@ -144,6 +197,8 @@ bun run src/main.ts --code <code> --wx
 | `autoRefillNormalFertilizer` | bool | `false` | 普通肥不足时自动补充 |
 | `useOrganicFertilizer` | bool | `false` | 额外施有机肥 |
 | `autoRefillOrganicFertilizer` | bool | `false` | 有机肥不足时自动补充 |
+| `enableFriendSteal` | bool | `true` | 自动偷好友菜 |
+| `enableFriendHelp` | bool | `true` | 自动帮好友（除草/除虫/浇水） |
 | `helpOnlyWithExp` | bool | `true` | 帮好友仅限有经验时（关闭后无经验也帮） |
 | `enablePutBadThings` | bool | `false` | 对好友农场放虫/放草 |
 | `autoClaimFreeGifts` | bool | `true` | 自动领取商店免费礼包 |
@@ -166,10 +221,21 @@ bun run src/main.ts --code <code> --wx
 
 ## HTTP API
 
-启用 `--api` 后可用，所有端点返回 `{ ok, data?, error? }` JSON。
+启用 `--api`（或 `--headless`）后可用，所有端点返回 `{ ok, data?, error? }` JSON。
+
+### 鉴权
+
+设置 `--api-key <密钥>` 后，所有非公开端点需要携带 `Authorization: Bearer <密钥>` 请求头，否则返回 401。
+
+公开端点（无需鉴权）：`GET /health`、`GET /swagger`、`GET /openapi.json`
+
+### 端点列表
 
 | 端点 | 说明 |
 |------|------|
+| `GET /health` | 健康检查，返回 `{ok, uptime}` |
+| `POST /login/qr-create` | 创建 QR 登录会话，返回二维码 URL 和终端文本 |
+| `POST /login/qr-poll` | 轮询扫码结果 `{loginCode, platform?}`，成功返回账号信息 |
 | `POST /account/list` | 账号列表 |
 | `POST /account/add` | 添加账号 `{platform, code}` |
 | `POST /account/remove` | 移除账号 `{id}` |
@@ -186,6 +252,28 @@ bun run src/main.ts --code <code> --wx
 | `GET /swagger` | Swagger UI |
 | `GET /openapi.json` | OpenAPI 3.0 规范 |
 
+### QR 扫码登录流程（API）
+
+适用于 Headless / Docker 部署场景，无终端时通过 API 完成 QQ 扫码登录：
+
+```bash
+# 1. 创建 QR 会话
+curl -X POST http://localhost:3000/login/qr-create \
+  -H "Authorization: Bearer <api-key>"
+
+# 响应: { ok: true, data: { loginCode: "xxx", url: "https://...", qrText: "..." } }
+# 用浏览器打开 url 或用手机 QQ 扫描 qrText 中的二维码
+
+# 2. 轮询扫码结果（扫码后调用）
+curl -X POST http://localhost:3000/login/qr-poll \
+  -H "Authorization: Bearer <api-key>" \
+  -H "Content-Type: application/json" \
+  -d '{"loginCode": "xxx"}'
+
+# 等待中: { ok: true, data: { status: "waiting" } }
+# 成功:   { ok: true, data: { id: "account-1", code: "xxx" } }
+```
+
 ## 经验效率分析
 
 ```bash
@@ -198,7 +286,7 @@ bun run tools/calc-exp-yield.ts --lands 18 --level 27
 
 ```
 src/
-├── main.ts                # 入口，CLI 参数解析
+├── main.ts                # 入口，CLI 参数解析，UI / Headless 分支
 ├── app.tsx                # Ink 根组件，路由 login/dashboard
 ├── core/                  # 业务逻辑
 │   ├── session.ts         # 单账号编排 (Connection + Store + Managers)
@@ -224,7 +312,8 @@ src/
 ├── store/                 # 状态管理 (EventEmitter -> React)
 ├── ui/                    # 终端 UI (screens, panels, hooks, components)
 ├── config/                # 配置 + 游戏数据 + 路径管理
-├── api/                   # HTTP API (Bun.serve)
+├── api/                   # HTTP API (Bun.serve + 鉴权)
+│   └── handlers/          # 路由处理器（account, farm, friend, login, stats, system）
 └── utils/                 # 工具函数（日志、时间、格式化）
 
 proto/                     # Protobuf 协议定义
@@ -239,6 +328,25 @@ data/                      # 运行时数据（gitignore）
 └── dumps/                 # WebSocket 消息 dump
 ```
 
+## CI/CD
+
+每次推送 `main` 分支自动触发 GitHub Actions：
+
+| Job | 产物 | 说明 |
+|-----|------|------|
+| **build** | GitHub Release | 编译 5 个平台二进制文件（linux-x64/arm64, darwin-x64/arm64, windows-x64） |
+| **docker** | GHCR 镜像 | 构建并推送 `ghcr.io/stringke/terminal-farm`，支持 `linux/amd64` + `linux/arm64` 双架构 |
+
+镜像 tag 规则：
+- `latest` -- 最新 main 分支
+- `<commit-sha>` -- 精确到提交
+
+拉取镜像：
+
+```bash
+docker pull ghcr.io/stringke/terminal-farm:latest
+```
+
 ## 技术栈
 
 | 层 | 技术 |
@@ -247,6 +355,9 @@ data/                      # 运行时数据（gitignore）
 | Language | TypeScript (ESM) |
 | UI | Ink 6 (React for CLI) |
 | Protocol | Protobuf (protobufjs) |
+| API | Bun.serve + Bearer Token 鉴权 |
+| Container | Docker (oven/bun) |
+| CI/CD | GitHub Actions |
 | Lint | Biome |
 | Validation | Zod |
 
@@ -257,6 +368,8 @@ data/                      # 运行时数据（gitignore）
 - 服务器有每日操作次数限制，bot 自动跟踪并停止已耗尽的操作
 - 请合理设置巡查间隔，过于频繁可能触发限流
 - 所有每日功能基于中国时间 (UTC+8) 重置
+- API 默认绑定 `127.0.0.1`，Docker 中自动绑定 `0.0.0.0`
+- 建议在公网部署时设置 `--api-key` 防止未授权访问
 
 ## 版本更新
 
@@ -270,7 +383,7 @@ data/                      # 运行时数据（gitignore）
 
 ## 免责声明
 
-本项目仅供学习和研究用途。使用本工具可能违反游戏服务条款，由此产生的一切后果由使用者自行承担。
+本项目仅供个人学习和研究用途。严禁将本项目用于任何形式的商业盈利活动。使用本工具可能违反游戏服务条款，由此产生的一切后果由使用者自行承担。
 
 ## 致谢
 

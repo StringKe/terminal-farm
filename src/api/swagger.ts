@@ -63,8 +63,10 @@ function getRouteTag(path: string): string {
 function getRouteSummary(path: string): string {
   const summaries: Record<string, string> = {
     '/account/list': '获取所有账号状态',
-    '/account/add': '添加账号',
+    '/account/add': '添加账号（需 platform + code）',
     '/account/remove': '移除账号',
+    '/login/qr-create': '创建 QR 登录会话，返回二维码 URL',
+    '/login/qr-poll': '轮询 QR 扫码结果（需 loginCode）',
     '/farm/status': '获取农场状态（土地+用户+背包+天气+调度器）',
     '/farm/harvest': '手动触发巡田',
     '/farm/replant': '手动触发换种',
@@ -75,6 +77,7 @@ function getRouteSummary(path: string): string {
     '/system/logs': '获取最近日志',
     '/system/config': '获取运行时配置',
     '/system/version': '获取版本信息',
+    '/health': '健康检查',
   }
   return summaries[path] ?? path
 }

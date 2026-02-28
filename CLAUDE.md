@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-**terminal-farm** — QQ/微信经典农场小程序自动化挂机工具。全屏终端 UI + HTTP API，支持多账号。
+**terminal-farm** — QQ/微信经典农场小程序自动化挂机工具。全屏终端 UI + Headless API + Docker，支持多账号。
 
 技术栈：Bun + TypeScript + Ink (React CLI) + ESM + Protobuf
 
@@ -34,6 +34,15 @@ bun run src/main.ts --interval 5 --friend-interval 2
 # 启用 HTTP API
 bun run src/main.ts --api --api-port 3000
 
+# Headless 模式（无 UI，纯 API 服务）
+bun run src/main.ts --headless --code <code> --api-key <secret>
+
+# Headless 模式 + 对外暴露
+bun run src/main.ts --headless --api-host 0.0.0.0 --api-key <secret>
+
+# Docker
+docker run -d -p 3000:3000 -v ./data:/app/data ghcr.io/stringke/terminal-farm --code <code> --api-key <secret>
+
 # 验证 proto 加载
 bun run src/main.ts --verify
 
@@ -52,9 +61,10 @@ bun run tools/calc-exp-yield.ts --lands 18 --level 27
 ### 分层
 
 ```
-src/main.ts (入口，CLI 参数解析)
-  → app.tsx (Ink 根组件，路由 login/dashboard)
+src/main.ts (入口，CLI 参数解析，UI/Headless 分支)
+  → [UI 模式] app.tsx (Ink 根组件，路由 login/dashboard)
     → ui/ (screens, panels, hooks, components)
+  → [Headless 模式] 直接启动 core + API，无 UI 依赖
   → core/ (业务逻辑，纯 TS)
     → session.ts (单账号编排: Connection + Store + Scheduler + Managers)
     → scheduler.ts (统一任务调度: 串行化 + 抖动 + 休息)
@@ -66,7 +76,8 @@ src/main.ts (入口，CLI 参数解析)
   → store/ (状态管理，EventEmitter 驱动)
     → session-store.ts / account-store.ts
   → config/ (配置 + 游戏数据)
-  → api/ (HTTP API, Bun.serve)
+  → api/ (HTTP API, Bun.serve + Bearer Token 鉴权)
+    → handlers/ (account, farm, friend, login, stats, system)
   → utils/ (日志、时间、格式化)
 ```
 

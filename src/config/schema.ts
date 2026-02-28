@@ -19,6 +19,8 @@ export const appConfigSchema = z.object({
   deviceInfo: deviceInfoSchema,
   apiEnabled: z.boolean().default(false),
   apiPort: z.number().int().positive().default(3000),
+  apiHost: z.string().default('127.0.0.1'),
+  apiKey: z.string().default(''),
 })
 
 export const accountConfigSchema = z.object({
@@ -30,6 +32,8 @@ export const accountConfigSchema = z.object({
   autoRefillNormalFertilizer: z.boolean().default(false),
   useOrganicFertilizer: z.boolean().default(false),
   autoRefillOrganicFertilizer: z.boolean().default(false),
+  enableFriendSteal: z.boolean().default(true),
+  enableFriendHelp: z.boolean().default(true),
   enablePutBadThings: z.boolean().default(false),
   autoClaimFreeGifts: z.boolean().default(true),
   autoUseGiftPacks: z.boolean().default(true),

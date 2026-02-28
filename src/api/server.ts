@@ -3,15 +3,16 @@ import { handleRequest } from './routes.js'
 
 let server: ReturnType<typeof Bun.serve> | null = null
 
-export function startApiServer(port: number): void {
+export function startApiServer(port: number, hostname = '127.0.0.1'): void {
   if (server) return
 
   server = Bun.serve({
     port,
+    hostname,
     fetch: handleRequest,
   })
 
-  log('API', `HTTP 服务已启动: http://localhost:${port}  Swagger: http://localhost:${port}/swagger`)
+  log('API', `HTTP 服务已启动: http://${hostname}:${port}  Swagger: http://${hostname}:${port}/swagger`)
 }
 
 export function stopApiServer(): void {

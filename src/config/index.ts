@@ -33,6 +33,8 @@ export const config: AppConfig = {
   },
   apiEnabled: false,
   apiPort: 3000,
+  apiHost: '127.0.0.1',
+  apiKey: '',
 }
 
 export function updateConfig(partial: Partial<AppConfig>): void {

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+data/
+logs/
+dumps/
+local/
+.DS_Store
+*.log
+*.tgz
+.git/
+.github/
+tools/
+docs/

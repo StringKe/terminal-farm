@@ -252,12 +252,13 @@ export class FriendManager {
     const actions: string[] = []
     const jitter = this.scheduler.jitterRatio
     // Help operations
+    const acfg = this.getAccountConfig()
     for (const [opId, landIds, helpFn, label] of [
       [10005, status.needWeed, (gid: number, ids: number[]) => this.helpWeed(gid, ids), '草'] as const,
       [10006, status.needBug, (gid: number, ids: number[]) => this.helpInsecticide(gid, ids), '虫'] as const,
       [10007, status.needWater, (gid: number, ids: number[]) => this.helpWater(gid, ids), '水'] as const,
     ]) {
-      if (landIds.length > 0 && (!this.getAccountConfig().helpOnlyWithExp || this.canGetExp(opId))) {
+      if (acfg.enableFriendHelp && landIds.length > 0 && (!acfg.helpOnlyWithExp || this.canGetExp(opId))) {
         this.markExpCheck(opId)
         let ok = 0
         for (const landId of landIds) {
@@ -274,7 +275,7 @@ export class FriendManager {
       }
     }
     // Steal
-    if (status.stealable.length > 0) {
+    if (acfg.enableFriendSteal && status.stealable.length > 0) {
       let ok = 0
       const stolenPlants: string[] = []
       for (let i = 0; i < status.stealable.length; i++) {
@@ -292,7 +293,7 @@ export class FriendManager {
       }
     }
     // Put bad things
-    if (this.getAccountConfig().enablePutBadThings) {
+    if (acfg.enablePutBadThings) {
       if (status.canPutWeed.length > 0 && this.canOperate(10003)) {
         const weedOk = await this.putWeeds(friend.gid, status.canPutWeed)
         if (weedOk > 0) {
@@ -327,11 +328,12 @@ export class FriendManager {
         return
       }
       const state = this.conn.userState
+      const acfg = this.getAccountConfig()
+      const wantSteal = acfg.enableFriendSteal
+      const wantHelp = acfg.enableFriendHelp
+      const wantPut = acfg.enablePutBadThings
       const canHelpWithExp =
-        !this.getAccountConfig().helpOnlyWithExp ||
-        this.canGetExp(10005) ||
-        this.canGetExp(10006) ||
-        this.canGetExp(10007)
+        wantHelp && (!acfg.helpOnlyWithExp || this.canGetExp(10005) || this.canGetExp(10006) || this.canGetExp(10007))
       const friendsToVisit: { gid: number; name: string }[] = []
       const visitedGids = new Set<number>()
       for (const f of friends) {
@@ -339,9 +341,9 @@ export class FriendManager {
         if (gid === state.gid || visitedGids.has(gid)) continue
         const name = f.remark || f.name || `GID:${gid}`
         const p = f.plant
-        const hasSteal = p ? toNum(p.steal_plant_num) > 0 : false
+        const hasSteal = wantSteal && p ? toNum(p.steal_plant_num) > 0 : false
         const hasHelp = p ? toNum(p.dry_num) > 0 || toNum(p.weed_num) > 0 || toNum(p.insect_num) > 0 : false
-        if (hasSteal || (hasHelp && canHelpWithExp)) {
+        if (hasSteal || (hasHelp && canHelpWithExp) || wantPut) {
           friendsToVisit.push({ gid, name })
           visitedGids.add(gid)
         }
