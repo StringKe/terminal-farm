@@ -14,6 +14,7 @@ import { RedPacketManager } from './redpacket.js'
 import { TaskScheduler } from './scheduler.js'
 import { ShopManager } from './shop.js'
 import { TaskManager } from './task.js'
+import { TlogReportManager } from './tlog-report.js'
 import { WarehouseManager } from './warehouse.js'
 import { WeatherManager } from './weather.js'
 
@@ -36,6 +37,7 @@ export class Session {
   readonly shop: ShopManager
   readonly redpacket: RedPacketManager
   readonly mall: MallManager
+  readonly tlog: TlogReportManager
 
   accountConfig: AccountConfig
 
@@ -70,6 +72,7 @@ export class Session {
     this.shop = new ShopManager(this.conn, getAccountConfig, logger, this.scheduler)
     this.redpacket = new RedPacketManager(this.conn, logger, this.scheduler)
     this.mall = new MallManager(this.conn, logger, this.scheduler)
+    this.tlog = new TlogReportManager(this.conn, config, logger)
     this.farm.setIllustratedManager(this.illustrated)
 
     // Forward connection events to store
@@ -114,6 +117,9 @@ export class Session {
       log('配置', `已加载账号配置 GID=${gid}`)
     }
 
+    // Start TlogReport (before managers, after login)
+    this.tlog.start()
+
     // Process invite codes (WX only)
     await processInviteCodes(this.conn, this.logger)
 
@@ -135,6 +141,7 @@ export class Session {
 
   stop(): void {
     this.stopped = true
+    this.tlog.stop()
     this.stopManagers()
     this.conn.close()
     if (this.logUnsub) {
@@ -184,6 +191,7 @@ export class Session {
       try {
         this.conn.cleanup()
         await this.conn.connect(this.code)
+        this.tlog.start()
         await processInviteCodes(this.conn, this.logger)
         this.startManagers()
         log('重连', '重连成功，所有模块已恢复')
