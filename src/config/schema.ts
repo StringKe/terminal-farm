@@ -3,9 +3,19 @@ import { z } from 'zod'
 export const deviceInfoSchema = z.object({
   client_version: z.string(),
   sys_software: z.string(),
+  sys_hardware: z.string(),
+  telecom_oper: z.string(),
   network: z.string(),
-  memory: z.string(),
+  screen_width: z.number().int(),
+  screen_height: z.number().int(),
+  density: z.number(),
+  cpu: z.string(),
+  memory: z.number().int(),
+  gl_render: z.string(),
+  gl_version: z.string(),
   device_id: z.string(),
+  android_oaid: z.string(),
+  ios_caid: z.string(),
 })
 
 export const appConfigSchema = z.object({
@@ -33,6 +43,7 @@ export const accountConfigSchema = z.object({
   useOrganicFertilizer: z.boolean().default(false),
   autoRefillOrganicFertilizer: z.boolean().default(false),
   enableFriendSteal: z.boolean().default(true),
+  stealMinExp: z.number().int().nonnegative().default(0),
   enableFriendHelp: z.boolean().default(true),
   enablePutBadThings: z.boolean().default(false),
   autoClaimFreeGifts: z.boolean().default(true),
