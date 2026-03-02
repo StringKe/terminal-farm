@@ -44,7 +44,7 @@ export interface OperationTiming {
 
 export const DEFAULT_TIMING: OperationTiming = {
   rttSec: 0.15,
-  sleepBetweenSec: 0.08,
+  sleepBetweenSec: 0.8,
   fixedRpcCount: 5,
   checkIntervalSec: 1,
   schedulerOverheadSec: 5,

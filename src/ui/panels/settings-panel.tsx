@@ -25,6 +25,7 @@ const SETTINGS: SettingItem[] = [
   { key: 'useOrganicFertilizer', label: '有机肥料', type: 'boolean' },
   { key: 'autoRefillOrganicFertilizer', label: '自动补充有机肥料', type: 'boolean' },
   { key: 'enableFriendSteal', label: '偷好友菜', type: 'boolean' },
+  { key: 'stealMinExp', label: '偷菜最低经验 (0=不限)', type: 'number', step: 1, min: 0, max: 999 },
   { key: 'enableFriendHelp', label: '帮好友(除草/除虫/浇水)', type: 'boolean' },
   { key: 'helpOnlyWithExp', label: '帮好友仅限有经验', type: 'boolean' },
   { key: 'enablePutBadThings', label: '放虫放草', type: 'boolean' },

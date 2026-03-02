@@ -1,4 +1,4 @@
-import { getPlantName } from '../config/game-data.js'
+import { getPlantExp, getPlantName } from '../config/game-data.js'
 import { OP_NAMES, PlantPhase, config } from '../config/index.js'
 import type { AccountConfig } from '../config/schema.js'
 import type { Connection } from '../protocol/connection.js'
@@ -169,7 +169,7 @@ export class FriendManager {
         this.updateOperationLimits(reply.operation_limits)
         ok++
       } catch {}
-      await jitteredSleep(100, jitter)
+      await jitteredSleep(800, jitter)
     }
     return ok
   }
@@ -187,12 +187,12 @@ export class FriendManager {
         this.updateOperationLimits(reply.operation_limits)
         ok++
       } catch {}
-      await jitteredSleep(100, jitter)
+      await jitteredSleep(800, jitter)
     }
     return ok
   }
 
-  private analyzeFriendLands(lands: any[], myGid: number) {
+  private analyzeFriendLands(lands: any[], myGid: number, minStealExp: number) {
     const result = {
       stealable: [] as number[],
       stealableInfo: [] as any[],
@@ -201,6 +201,7 @@ export class FriendManager {
       needBug: [] as number[],
       canPutWeed: [] as number[],
       canPutBug: [] as number[],
+      skippedLowExp: 0,
     }
     for (const land of lands) {
       const id = toNum(land.id)
@@ -211,11 +212,16 @@ export class FriendManager {
       const phaseVal = currentPhase.phase
       if (phaseVal === PlantPhase.MATURE) {
         if (plant.stealable) {
+          const plantId = toNum(plant.id)
+          if (minStealExp > 0 && getPlantExp(plantId) < minStealExp) {
+            result.skippedLowExp++
+            continue
+          }
           result.stealable.push(id)
           result.stealableInfo.push({
             landId: id,
-            plantId: toNum(plant.id),
-            name: getPlantName(toNum(plant.id)) || plant.name,
+            plantId,
+            name: getPlantName(plantId) || plant.name,
           })
         }
         continue
@@ -248,11 +254,11 @@ export class FriendManager {
       await this.leaveFriendFarm(friend.gid)
       return
     }
-    const status = this.analyzeFriendLands(lands, this.conn.userState.gid)
+    const acfg = this.getAccountConfig()
+    const status = this.analyzeFriendLands(lands, this.conn.userState.gid, acfg.stealMinExp)
     const actions: string[] = []
     const jitter = this.scheduler.jitterRatio
     // Help operations
-    const acfg = this.getAccountConfig()
     for (const [opId, landIds, helpFn, label] of [
       [10005, status.needWeed, (gid: number, ids: number[]) => this.helpWeed(gid, ids), '草'] as const,
       [10006, status.needBug, (gid: number, ids: number[]) => this.helpInsecticide(gid, ids), '虫'] as const,
@@ -266,7 +272,7 @@ export class FriendManager {
             await helpFn(friend.gid, [landId])
             ok++
           } catch {}
-          await jitteredSleep(100, jitter)
+          await jitteredSleep(800, jitter)
         }
         if (ok > 0) {
           actions.push(`${label}${ok}`)
@@ -284,7 +290,7 @@ export class FriendManager {
           ok++
           if (status.stealableInfo[i]) stolenPlants.push(status.stealableInfo[i].name)
         } catch {}
-        await jitteredSleep(100, jitter)
+        await jitteredSleep(800, jitter)
       }
       if (ok > 0) {
         const plantNames = [...new Set(stolenPlants)].join('/')

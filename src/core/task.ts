@@ -109,7 +109,7 @@ export class TaskManager {
         const items = claimReply.items || []
         const rewardStr = items.length > 0 ? formatRewards(items) : '无'
         this.logger.log('任务', `领取: ${task.desc}${multipleStr} → ${rewardStr}`)
-        await jitteredSleep(300, this.scheduler.jitterRatio)
+        await jitteredSleep(800, this.scheduler.jitterRatio)
       } catch (e: any) {
         this.logger.logWarn('任务', `领取失败 #${task.id}: ${e.message}`)
       }

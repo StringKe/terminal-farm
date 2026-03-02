@@ -140,7 +140,7 @@ export class WarehouseManager {
           this.logger.logWarn('背包', `使用 ${name} 失败: ${e.message}`)
           break
         }
-        await jitteredSleep(300, jitter)
+        await jitteredSleep(800, jitter)
       }
     }
     if (anyUsed) {

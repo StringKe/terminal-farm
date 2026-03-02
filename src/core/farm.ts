@@ -53,7 +53,7 @@ export class FarmManager {
     const jitter = this.scheduler.jitterRatio
     return {
       rttSec: this.conn.getAverageRttMs() / 1000,
-      sleepBetweenSec: jitter > 0 ? 0.08 : 0.05,
+      sleepBetweenSec: jitter > 0 ? 0.8 : 0.05,
       fixedRpcCount: 5,
       checkIntervalSec: config.farmCheckInterval / 1000,
       schedulerOverheadSec: this.getSchedulerOverhead(),
@@ -73,6 +73,13 @@ export class FarmManager {
       default:
         return 5
     }
+  }
+
+  private async refreshLandsForUI(): Promise<void> {
+    try {
+      const reply = await this.getAllLands()
+      if (reply.lands?.length) this.store.updateLands(reply.lands)
+    } catch {}
   }
 
   async getAllLands(): Promise<any> {
@@ -133,11 +140,11 @@ export class FarmManager {
   async fertilize(landIds: number[], fertilizerId = NORMAL_FERTILIZER_ID): Promise<number> {
     let successCount = 0
     let lastCount = -1
-    for (const landId of landIds) {
+    for (let i = 0; i < landIds.length; i++) {
       try {
         const body = types.FertilizeRequest.encode(
           types.FertilizeRequest.create({
-            land_ids: [toLong(landId)],
+            land_ids: [toLong(landIds[i])],
             fertilizer_id: toLong(fertilizerId),
           }),
         ).finish()
@@ -148,7 +155,8 @@ export class FarmManager {
       } catch {
         continue
       }
-      if (landIds.length > 1) await jitteredSleep(80, this.scheduler.jitterRatio)
+      if (landIds.length > 1) await jitteredSleep(800, this.scheduler.jitterRatio)
+      if (i > 0 && i % 6 === 5) await this.refreshLandsForUI()
     }
     if (lastCount >= 0 && lastCount <= 100) {
       const cfg = this.getAccountConfig()
@@ -224,16 +232,17 @@ export class FarmManager {
 
   async plantSeeds(seedId: number, landIds: number[]): Promise<number> {
     let successCount = 0
-    for (const landId of landIds) {
+    for (let i = 0; i < landIds.length; i++) {
       try {
-        const body = this.encodePlantRequest(seedId, [landId])
+        const body = this.encodePlantRequest(seedId, [landIds[i]])
         const { body: replyBody } = await this.conn.sendMsgAsync('gamepb.plantpb.PlantService', 'Plant', body)
         types.PlantReply.decode(replyBody)
         successCount++
       } catch (e: any) {
-        this.logger.logWarn('种植', `土地#${landId} 失败: ${e.message}`)
+        this.logger.logWarn('种植', `土地#${landIds[i]} 失败: ${e.message}`)
       }
-      if (landIds.length > 1) await jitteredSleep(80, this.scheduler.jitterRatio)
+      if (landIds.length > 1) await jitteredSleep(800, this.scheduler.jitterRatio)
+      if (i > 0 && i % 6 === 5) await this.refreshLandsForUI()
     }
     return successCount
   }
@@ -583,7 +592,7 @@ export class FarmManager {
         } catch (e: any) {
           this.logger.logWarn(op.warn, e.message)
         }
-        if (jitter > 0 && ordered.length > 1) await jitteredSleep(200, jitter)
+        if (jitter > 0 && ordered.length > 1) await jitteredSleep(1000, jitter)
       }
       let harvestedLandIds: number[] = []
       if (status.harvestable.length > 0) {
@@ -617,6 +626,9 @@ export class FarmManager {
 
       if (this.getAccountConfig().autoReplantMode === 'always' && status.growing.length > 0)
         await this.autoReplantIfNeeded(lands, 'check')
+
+      // 操作完成后刷新一次地块数据，确保 UI 及时反映最新状态
+      if (hasWork) await this.refreshLandsForUI()
     } catch (err: any) {
       this.logger.logWarn('巡田', `检查失败: ${err.message}`)
     } finally {
