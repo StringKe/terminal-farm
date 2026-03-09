@@ -4,6 +4,7 @@ import type { AppConfig } from '../config/schema.js'
 import type { ScopedLogger } from '../utils/logger.js'
 import { toLong, toNum } from '../utils/long.js'
 import { syncServerTime } from '../utils/time.js'
+import { encryptBuffer } from './crypto-wasm.js'
 import { types } from './proto-loader.js'
 import type { UserState } from './types.js'
 import { dumpNotify, dumpRaw, dumpResponse } from './ws-dumper.js'
@@ -87,12 +88,27 @@ export class Connection extends EventEmitter {
     })
   }
 
-  sendMsg(serviceName: string, methodName: string, bodyBytes: Uint8Array, callback?: SendCallback): boolean {
+  async sendMsg(serviceName: string, methodName: string, bodyBytes: Uint8Array, callback?: SendCallback): Promise<boolean> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       this.logger.log('WS', '连接未打开')
+      if (callback) callback(new Error('连接未打开'))
       return false
     }
     const seq = this.clientSeq
+    this.clientSeq++
+
+    let finalBody: Uint8Array = bodyBytes || Buffer.alloc(0)
+    try {
+      finalBody = await encryptBuffer(finalBody)
+    } catch (e: any) {
+      this.logger.logWarn('WS', `WASM加密失败: ${e.message}`)
+    }
+
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      if (callback) callback(new Error('连接已在加密途中关闭'))
+      return false
+    }
+
     const msg = types.GateMessage.create({
       meta: {
         service_name: serviceName,
@@ -101,10 +117,9 @@ export class Connection extends EventEmitter {
         client_seq: toLong(seq),
         server_seq: toLong(this.serverSeq),
       },
-      body: bodyBytes || Buffer.alloc(0),
+      body: finalBody,
     })
     const encoded = types.GateMessage.encode(msg).finish()
-    this.clientSeq++
     if (callback) this.pendingCallbacks.set(seq, { callback, sentAt: Date.now() })
     this.ws.send(encoded)
     return true
@@ -127,15 +142,18 @@ export class Connection extends EventEmitter {
         reject(new Error(`请求超时: ${methodName} (seq=${seq}, pending=${this.pendingCallbacks.size})`))
       }, timeout)
 
-      const sent = this.sendMsg(serviceName, methodName, bodyBytes, (err, body, meta) => {
+      this.sendMsg(serviceName, methodName, bodyBytes, (err, body, meta) => {
         clearTimeout(timer)
         if (err) reject(err)
         else resolve({ body: body!, meta })
-      })
-      if (!sent) {
+      }).then((sent) => {
+        if (!sent) {
+          clearTimeout(timer)
+        }
+      }).catch((err) => {
         clearTimeout(timer)
-        reject(new Error(`发送失败: ${methodName}`))
-      }
+        reject(err)
+      })
     })
   }
 

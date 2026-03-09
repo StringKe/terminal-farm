@@ -3,25 +3,21 @@ import { useState } from 'react'
 import { PanelBox } from '../components/panel-box.js'
 
 interface LoginScreenProps {
-  onLoginQR: () => void
   onLoginCode: (platform: 'qq' | 'wx', code: string) => void
   isLoading: boolean
   error: string | null
-  qrText?: string | null
-  qrUrl?: string | null
   onBack?: () => void
 }
 
-type Mode = 'menu' | 'input-code' | 'qr-scan'
+type Mode = 'menu' | 'input-code'
 
-export function LoginScreen({ onLoginQR, onLoginCode, isLoading, error, qrText, qrUrl, onBack }: LoginScreenProps) {
+export function LoginScreen({ onLoginCode, isLoading, error, onBack }: LoginScreenProps) {
   const [mode, setMode] = useState<Mode>('menu')
   const [selected, setSelected] = useState(0)
   const [codeInput, setCodeInput] = useState('')
   const [platform, setPlatform] = useState<'qq' | 'wx'>('qq')
 
   const menuItems = [
-    { label: 'QQ 扫码登录', action: () => onLoginQR() },
     {
       label: 'QQ Code 登录',
       action: () => {
@@ -38,18 +34,10 @@ export function LoginScreen({ onLoginQR, onLoginCode, isLoading, error, qrText, 
     },
   ]
 
-  // Switch to qr-scan mode when qrText arrives
-  const effectiveMode = qrText ? 'qr-scan' : mode
-
   useInput((input, key) => {
-    if (isLoading && !qrText) return
+    if (isLoading) return
 
-    if (effectiveMode === 'qr-scan') {
-      // In QR scan mode, no interaction needed (waiting for scan)
-      return
-    }
-
-    if (effectiveMode === 'menu') {
+    if (mode === 'menu') {
       if (key.escape && onBack) {
         onBack()
         return
@@ -60,7 +48,7 @@ export function LoginScreen({ onLoginQR, onLoginCode, isLoading, error, qrText, 
       return
     }
 
-    if (effectiveMode === 'input-code') {
+    if (mode === 'input-code') {
       if (key.escape) {
         setMode('menu')
         setCodeInput('')
@@ -94,28 +82,11 @@ export function LoginScreen({ onLoginQR, onLoginCode, isLoading, error, qrText, 
         </Box>
       )}
 
-      {isLoading && !qrText ? (
+      {isLoading ? (
         <PanelBox title="登录中">
           <Text>连接服务器中，请稍候...</Text>
         </PanelBox>
-      ) : effectiveMode === 'qr-scan' ? (
-        <PanelBox title="QQ 扫码登录">
-          <Text>{qrText}</Text>
-          {qrUrl && (
-            <Box marginTop={1}>
-              <Text dimColor>若二维码显示异常，可打开链接:</Text>
-            </Box>
-          )}
-          {qrUrl && (
-            <Text
-              dimColor
-            >{`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrUrl)}`}</Text>
-          )}
-          <Box marginTop={1}>
-            <Text color="yellow">等待扫码...</Text>
-          </Box>
-        </PanelBox>
-      ) : effectiveMode === 'menu' ? (
+      ) : mode === 'menu' ? (
         <PanelBox title="选择登录方式">
           {menuItems.map((item, i) => (
             <Text key={item.label}>

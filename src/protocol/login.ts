@@ -39,9 +39,14 @@ async function queryScanStatus(loginCode: string): Promise<{ status: string; tic
   const { code, data } = response.data || {}
   if (+code === 0) {
     if (+data?.ok !== 1) return { status: 'Wait' }
-    return { status: 'OK', ticket: data.ticket || '' }
+    const ticket = data.ticket || ''
+    if (!ticket) {
+      console.error('[扫码登录] 扫码成功但 ticket 为空, response:', JSON.stringify(response.data))
+    }
+    return { status: 'OK', ticket }
   }
   if (+code === -10003) return { status: 'Used' }
+  console.error('[扫码登录] queryScanStatus 异常, response:', JSON.stringify(response.data))
   return { status: 'Error' }
 }
 
@@ -51,8 +56,19 @@ async function getAuthCode(ticket: string): Promise<string> {
     { appid: FARM_APP_ID, ticket },
     { headers: getHeaders() },
   )
-  if (response.status !== 200 || !response.data?.code) throw new Error('获取农场登录 code 失败')
-  return response.data.code
+  if (response.status !== 200) throw new Error(`获取农场登录 code 失败: HTTP ${response.status}`)
+
+  const resData = response.data
+  const code = resData?.code
+
+  // /ide/login 成功时返回 { code: "auth_code_string" }
+  // 失败时返回 { code: <负数错误码> } 如 -3000
+  if (typeof code === 'number' || !code) {
+    const msg = resData?.msg || resData?.message || ''
+    throw new Error(`登录 code 交换失败: code=${code}${msg ? ` msg=${msg}` : ''} (response=${JSON.stringify(resData)})`)
+  }
+
+  return code
 }
 
 export interface QRLoginInfo {

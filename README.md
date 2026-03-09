@@ -2,7 +2,7 @@
 
 QQ/微信农场自动化挂机工具 -- 全屏终端 UI + 多账号 + HTTP API + Docker
 
-> 基于 [qq-farm-bot](https://github.com/linguo2625469/qq-farm-bot) 重构
+> 基于 [qq-farm-bot](https://github.com/linguo2625469/qq-farm-bot) 重构，协议更新参考 [qq-farm-bot-ui](https://github.com/Penty-d/qq-farm-bot-ui)
 
 ## 风险提示
 
@@ -446,6 +446,7 @@ docker pull ghcr.io/stringke/terminal-farm:latest
 ## 致谢
 
 - [qq-farm-bot](https://github.com/linguo2625469/qq-farm-bot) -- 原始项目
+- [qq-farm-bot-ui](https://github.com/Penty-d/qq-farm-bot-ui) -- 协议更新参考（WASM 加密、版本号同步）
 
 ## License
 

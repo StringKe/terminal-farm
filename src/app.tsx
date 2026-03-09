@@ -2,7 +2,7 @@ import { Box, useApp, useInput } from 'ink'
 import { useCallback, useEffect, useState } from 'react'
 import { loadConfigs } from './config/game-data.js'
 import { config, updateConfig } from './config/index.js'
-import { addAccount, autoLogin, getSession, loginWithQR, stopAll } from './core/account.js'
+import { addAccount, autoLogin, getSession, stopAll } from './core/account.js'
 import { loadProto } from './protocol/proto-loader.js'
 import { accountStore, getSessionStore } from './store/index.js'
 import { KeyHint } from './ui/components/key-hint.js'
@@ -24,8 +24,6 @@ export function App({ cliCode, cliPlatform }: AppProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
-  const [qrText, setQrText] = useState<string | null>(null)
-  const [qrUrl, setQrUrl] = useState<string | null>(null)
   const [logScroll, setLogScroll] = useState(0)
 
   // Global Ctrl+C handler
@@ -103,37 +101,9 @@ export function App({ cliCode, cliPlatform }: AppProps) {
     }
   }, [])
 
-  const handleLoginQR = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    setQrText(null)
-    setQrUrl(null)
-    try {
-      const { qrInfo, poll } = await loginWithQR()
-      // Show QR code in UI
-      setQrText(qrInfo.qrText)
-      setQrUrl(qrInfo.url)
-      // Poll in background
-      const session = await poll()
-      if (session) {
-        setQrText(null)
-        setQrUrl(null)
-        setScreen('dashboard')
-      }
-    } catch (e: any) {
-      setError(e.message)
-      setQrText(null)
-      setQrUrl(null)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
   const handleAddAccount = useCallback(() => {
     setScreen('login')
     setError(null)
-    setQrText(null)
-    setQrUrl(null)
   }, [])
 
   const handleLoginCode = useCallback(async (platform: 'qq' | 'wx', code: string) => {
@@ -164,12 +134,9 @@ export function App({ cliCode, cliPlatform }: AppProps) {
     <Box flexDirection="column">
       {screen === 'login' ? (
         <LoginScreen
-          onLoginQR={handleLoginQR}
           onLoginCode={handleLoginCode}
           isLoading={isLoading}
           error={error}
-          qrText={qrText}
-          qrUrl={qrUrl}
           onBack={accountStore.getAccounts().length > 0 ? () => setScreen('dashboard') : undefined}
         />
       ) : (

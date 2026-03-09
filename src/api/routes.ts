@@ -2,7 +2,7 @@ import { config } from '../config/index.js'
 import { handleAccountAdd, handleAccountList, handleAccountRemove } from './handlers/account.js'
 import { handleFarmHarvest, handleFarmReplant, handleFarmStatus } from './handlers/farm.js'
 import { handleFriendList, handleFriendPatrol } from './handlers/friend.js'
-import { handleLoginQRCreate, handleLoginQRPoll } from './handlers/login.js'
+import { handleLoginCode, handleLoginQRCreate, handleLoginQRPoll } from './handlers/login.js'
 import { handleStatsHistory, handleStatsSummary } from './handlers/stats.js'
 import { handleSystemConfig, handleSystemLogs, handleSystemVersion } from './handlers/system.js'
 import { handleOpenAPISpec, handleSwagger } from './swagger.js'
@@ -13,6 +13,7 @@ const routes: Record<string, RouteHandler> = {
   'POST /account/list': handleAccountList,
   'POST /account/add': handleAccountAdd,
   'POST /account/remove': handleAccountRemove,
+  'POST /login/code': handleLoginCode,
   'POST /login/qr-create': handleLoginQRCreate,
   'POST /login/qr-poll': handleLoginQRPoll,
   'POST /farm/status': handleFarmStatus,

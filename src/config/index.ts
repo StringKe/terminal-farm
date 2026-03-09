@@ -14,7 +14,7 @@ export const versionData = (() => {
 })()
 
 const serverUrl = versionData.game?.serverUrl ?? 'wss://gate-obt.nqf.qq.com/prod/ws'
-const clientVersion = versionData.app?.clientVersion ?? '1.6.0.14_20251224'
+const clientVersion = versionData.app?.clientVersion ?? '1.6.2.18_20260227'
 
 export const config: AppConfig = {
   serverUrl,
@@ -26,7 +26,7 @@ export const config: AppConfig = {
   friendCheckInterval: 10000,
   deviceInfo: {
     client_version: clientVersion,
-    sys_software: 'iOS 18.3.2',
+    sys_software: 'iOS 26.2.1',
     sys_hardware: '',
     telecom_oper: '',
     network: 'wifi',
@@ -37,7 +37,7 @@ export const config: AppConfig = {
     memory: 7672,
     gl_render: 'Apple GPU',
     gl_version: 'OpenGL ES 3.0',
-    device_id: 'iPhone16,2',
+    device_id: 'iPhone X<iPhone18,3>',
     android_oaid: '',
     ios_caid: '',
   },

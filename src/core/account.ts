@@ -1,5 +1,5 @@
 import { config } from '../config/index.js'
-import { type QRLoginInfo, clearCode, loadCode, pollQRScanResult, requestQRLogin, saveCode } from '../protocol/login.js'
+import { clearCode, loadCode, saveCode } from '../protocol/login.js'
 import { accountStore, registerSessionStore, removeSessionStore } from '../store/index.js'
 import { log, logWarn } from '../utils/logger.js'
 import { Session } from './session.js'
@@ -76,29 +76,12 @@ export async function autoLogin(): Promise<Session | null> {
       try {
         return await addAccount('qq', savedCode)
       } catch {
-        log('持久化', '保存的 code 已失效，清除并回退到扫码登录...')
+        log('持久化', '保存的 code 已失效，清除...')
         clearCode()
       }
     }
   }
   return null
-}
-
-export async function loginWithQR(): Promise<{
-  qrInfo: QRLoginInfo
-  poll: () => Promise<Session>
-}> {
-  log('扫码登录', '正在获取二维码...')
-  const qrInfo = await requestQRLogin()
-  log('扫码登录', '二维码已生成，等待扫码...')
-  return {
-    qrInfo,
-    poll: async () => {
-      const code = await pollQRScanResult(qrInfo.loginCode)
-      log('扫码登录', `获取成功，code=${code.substring(0, 8)}...`)
-      return addAccount('qq', code)
-    },
-  }
 }
 
 export function stopAll(): void {

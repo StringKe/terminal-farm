@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 技术栈：Bun + TypeScript + Ink (React CLI) + ESM + Protobuf
 
 前身项目：[qq-farm-bot](https://github.com/StringKe/qq-farm-bot)
+协议参考：[qq-farm-bot-ui](https://github.com/Penty-d/qq-farm-bot-ui)
 
 ## 常用命令
 
@@ -72,6 +73,7 @@ src/main.ts (入口，CLI 参数解析，UI/Headless 分支)
     → farm.ts / friend.ts / task.ts / warehouse.ts
   → protocol/ (协议层)
     → connection.ts (实例化 WebSocket，非单例)
+    → crypto-wasm.ts / tsdk.wasm (WASM 协议加密)
     → codec.ts / proto-loader.ts / login.ts
   → store/ (状态管理，EventEmitter 驱动)
     → session-store.ts / account-store.ts
