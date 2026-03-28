@@ -1,94 +1,71 @@
 /**
  * QQFramBot Game Bridge
  *
- * 注入到 QQ 农场渲染进程的 JS 桥接层。
+ * 注入到 QQ 农场游戏页面（out_page-frame.html 的 executeJavaScript context）。
  * 通过 Cocos Creator API 操控游戏。
- *
- * 使用方式：通过 CDP webContents.executeJavaScript() 注入。
  */
-
 (function () {
   'use strict';
-
-  if (window.__qqframbot_bridge__) return;
+  if (window.__qqframbot_bridge__) return 'bridge_already_loaded';
   window.__qqframbot_bridge__ = true;
 
-  const Bridge = {
-    /**
-     * 获取游戏场景信息
-     */
-    getSceneInfo() {
+  var Bridge = {
+    getSceneInfo: function () {
       if (typeof cc === 'undefined') return { error: 'cc not found' };
-      const scene = cc.director.getScene();
+      var scene = cc.director.getScene();
       if (!scene) return { error: 'no scene' };
       return {
         name: scene.name,
         childCount: scene.children.length,
-        children: scene.children.map((c) => ({
-          name: c.name,
-          active: c.active,
-          childCount: c.children ? c.children.length : 0,
-        })),
+        children: scene.children.map(function (c) {
+          return {
+            name: c.name,
+            active: c.active,
+            childCount: c.children ? c.children.length : 0,
+          };
+        }),
       };
     },
 
-    /**
-     * 递归遍历节点树
-     */
-    walkNodes(path, maxDepth) {
+    walkNodes: function (path, maxDepth) {
       if (typeof cc === 'undefined') return { error: 'cc not found' };
       maxDepth = maxDepth || 3;
-      const root = path ? cc.find(path) : cc.director.getScene();
+      var scene = cc.director.getScene();
+      var root = path ? cc.find(path, scene) : scene;
       if (!root) return { error: 'node not found: ' + path };
 
       function walk(node, depth) {
-        const info = {
+        var info = {
           name: node.name,
           active: node.active,
-          position: node.position ? { x: node.position.x, y: node.position.y } : null,
-          components: [],
+          pos: node.position
+            ? [Math.round(node.position.x), Math.round(node.position.y)]
+            : null,
+          comps: [],
         };
         if (node._components) {
-          info.components = node._components.map((c) => c.__classname__ || c.constructor.name);
+          info.comps = node._components.map(function (c) {
+            return c.__classname__ || c.constructor.name;
+          });
         }
         if (depth < maxDepth && node.children) {
-          info.children = node.children.map((c) => walk(c, depth + 1));
+          info.ch = node.children.map(function (c) {
+            return walk(c, depth + 1);
+          });
         }
         return info;
       }
-
       return walk(root, 0);
     },
 
-    /**
-     * 查找包含特定组件的节点
-     */
-    findByComponent(componentName) {
+    findByComponent: function (componentName) {
       if (typeof cc === 'undefined') return { error: 'cc not found' };
-      const scene = cc.director.getScene();
-      const results = [];
+      var scene = cc.director.getScene();
+      var results = [];
 
-      function search(node) {
-        if (node._components) {
-          for (const comp of node._components) {
-            const name = comp.__classname__ || comp.constructor.name;
-            if (name.includes(componentName)) {
-              results.push({
-                path: getNodePath(node),
-                component: name,
-                active: node.active,
-              });
-            }
-          }
-        }
-        if (node.children) {
-          node.children.forEach(search);
-        }
-      }
-
-      function getNodePath(node) {
-        const parts = [];
-        let n = node;
+      function getPath(node) {
+        var parts = [];
+        var n = node;
         while (n && n !== scene) {
           parts.unshift(n.name);
           n = n.parent;
@@ -96,26 +73,114 @@
         return parts.join('/');
       }
 
+      function search(node) {
+        if (node._components) {
+          for (var i = 0; i < node._components.length; i++) {
+            var comp = node._components[i];
+            var name = comp.__classname__ || comp.constructor.name;
+            if (name.indexOf(componentName) >= 0) {
+              results.push({
+                path: getPath(node),
+                component: name,
+                active: node.active,
+              });
+            }
+          }
+        }
+        if (node.children) {
+          for (var j = 0; j < node.children.length; j++) {
+            search(node.children[j]);
+          }
+        }
+      }
       search(scene);
       return results;
     },
 
-    /**
-     * 模拟触摸事件
-     */
-    simulateTouch(path, eventType) {
+    simulateTouch: function (path) {
       if (typeof cc === 'undefined') return { error: 'cc not found' };
-      const node = cc.find(path);
+      var scene = cc.director.getScene();
+      var node = cc.find(path, scene);
       if (!node) return { error: 'node not found: ' + path };
 
-      eventType = eventType || cc.Node.EventType.TOUCH_END;
-      const touch = new cc.Touch(0, 0);
-      const event = new cc.Event.EventTouch([touch], false, eventType);
+      var touch = new cc.Touch(0, 0);
+      var event = new cc.Event.EventTouch([touch], false, cc.Node.EventType.TOUCH_END);
       node.dispatchEvent(event);
       return { ok: true, path: path };
+    },
+
+    getGameState: function () {
+      if (typeof cc === 'undefined') return { error: 'cc not found' };
+      var scene = cc.director.getScene();
+      if (!scene) return { error: 'no scene' };
+
+      var state = {
+        scene: scene.name,
+        timestamp: Date.now(),
+      };
+
+      // 搜索农场相关组件
+      var farmNodes = [];
+      function searchFarm(node) {
+        if (node._components) {
+          for (var i = 0; i < node._components.length; i++) {
+            var comp = node._components[i];
+            var name = comp.__classname__ || comp.constructor.name;
+            if (
+              name.indexOf('Farm') >= 0 ||
+              name.indexOf('Crop') >= 0 ||
+              name.indexOf('Land') >= 0 ||
+              name.indexOf('Plant') >= 0 ||
+              name.indexOf('field') >= 0
+            ) {
+              farmNodes.push({
+                path: getPath(node),
+                comp: name,
+                data: tryExtractData(comp),
+              });
+            }
+          }
+        }
+        if (node.children) {
+          for (var j = 0; j < node.children.length; j++) {
+            searchFarm(node.children[j]);
+          }
+        }
+      }
+
+      function getPath(node) {
+        var parts = [];
+        var n = node;
+        while (n && n !== scene) {
+          parts.unshift(n.name);
+          n = n.parent;
+        }
+        return parts.join('/');
+      }
+
+      function tryExtractData(comp) {
+        var data = {};
+        try {
+          var keys = Object.keys(comp);
+          for (var i = 0; i < keys.length; i++) {
+            var k = keys[i];
+            if (k.startsWith('_') || k === 'node' || k === '__eventTargets') continue;
+            var v = comp[k];
+            var t = typeof v;
+            if (t === 'string' || t === 'number' || t === 'boolean') {
+              data[k] = v;
+            }
+          }
+        } catch (e) {}
+        return data;
+      }
+
+      searchFarm(scene);
+      state.farmNodes = farmNodes;
+      return state;
     },
   };
 
   window.__qqframbot__ = Bridge;
-  console.log('[QQFramBot] game bridge loaded');
+  return 'bridge_loaded';
 })();
