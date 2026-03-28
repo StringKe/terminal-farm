@@ -153,19 +153,33 @@
     },
 
     /*
-     * 一键操作 — OneClickOperationBtnComp.onButtonClick(index)
-     * 0 = icon_steals (收获/偷菜)
-     * 1 = icon_waterings (浇水)
-     * 2 = icon_grass_erasers (除草)
-     * 3 = icon_bug_killers (杀虫)
+     * 一键操作 — 通过 icon sprite name 查找按钮索引，不依赖固定顺序
      */
+
+    /** 根据 icon sprite name 找到按钮索引 */
+    _findButtonIndex: function (iconName) {
+      var ock = getOneClick();
+      var parent = ock.parentNode;
+      if (!parent || !parent.children) return -1;
+      for (var i = 0; i < parent.children.length; i++) {
+        var child = parent.children[i];
+        for (var j = 0; j < child.children.length; j++) {
+          var sp = child.children[j].getComponent('cc.Sprite');
+          if (sp && sp.spriteFrame && sp.spriteFrame.name === iconName) return i;
+        }
+      }
+      return -1;
+    },
 
     /** 一键收获（自己农场）/ 一键偷菜（好友农场） */
     harvestAll: function () {
       var ock = getOneClick();
       var ids = ock.getAllHarvestableLandIds();
       if (ids.length === 0) return { count: 0 };
-      ock.onButtonClick(0);
+      var idx = this._findButtonIndex('icon_steals');
+      if (idx < 0) idx = this._findButtonIndex('icon_harvests');
+      if (idx < 0) return { error: 'harvest button not found' };
+      ock.onButtonClick(idx);
       return { count: ids.length, landIds: ids };
     },
 
@@ -174,7 +188,9 @@
       var ock = getOneClick();
       var ids = ock.getAllWaterableLandIds();
       if (ids.length === 0) return { count: 0 };
-      ock.onButtonClick(1);
+      var idx = this._findButtonIndex('icon_waterings');
+      if (idx < 0) return { error: 'water button not found' };
+      ock.onButtonClick(idx);
       return { count: ids.length, landIds: ids };
     },
 
@@ -183,7 +199,9 @@
       var ock = getOneClick();
       var ids = ock.getAllEraseGrassLandIds();
       if (ids.length === 0) return { count: 0 };
-      ock.onButtonClick(2);
+      var idx = this._findButtonIndex('icon_grass_erasers');
+      if (idx < 0) return { error: 'eraseGrass button not found' };
+      ock.onButtonClick(idx);
       return { count: ids.length, landIds: ids };
     },
 
@@ -192,7 +210,9 @@
       var ock = getOneClick();
       var ids = ock.getAllKillBugLandIds();
       if (ids.length === 0) return { count: 0 };
-      ock.onButtonClick(3);
+      var idx = this._findButtonIndex('icon_bug_killers');
+      if (idx < 0) return { error: 'killBug button not found' };
+      ock.onButtonClick(idx);
       return { count: ids.length, landIds: ids };
     },
 
