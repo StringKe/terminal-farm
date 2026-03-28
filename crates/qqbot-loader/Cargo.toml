@@ -1,0 +1,9 @@
+[package]
+name = "qqbot-loader"
+description = "Inject inspector dylib into QQEXMiniProgram via LLDB"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
