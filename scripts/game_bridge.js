@@ -87,69 +87,81 @@
       return lands;
     },
 
-    /** 点击指定地块（弹出交互面板） */
-    clickLand: function (gridX, gridY) {
-      var scene = getScene();
-      var gridNode = cc.find('root/scene/farm_scene_v3/Scaled/Rotate/GridOrigin/grid_' + gridX + '_' + gridY, scene);
-      if (!gridNode) return { error: 'land not found' };
-      var lc = gridNode.getComponent('LandComp');
-      lc.showPlantInteraction();
-      return { ok: true, grid: [gridX, gridY] };
+    /**
+     * 点击指定地块（弹出交互面板）
+     * 自动区分单地块和合并大地块（land_size > 1 用 onMultiLandClicked）
+     */
+    clickLand: function (landId) {
+      var farm = getFarmMap();
+      var lc = farm.getLandCompByLandId(landId);
+      if (!lc) return { error: 'land not found: ' + landId };
+      var ld = lc.getLandData();
+      if (ld && ld.landData && ld.landData.land_size > 1) {
+        lc.onMultiLandClicked();
+      } else {
+        lc.showPlantInteraction();
+      }
+      return { ok: true, landId: landId };
     },
 
     /** 收获指定地块 */
-    harvest: function (gridX, gridY) {
-      this.clickLand(gridX, gridY);
+    harvest: function (landId) {
+      var r = this.clickLand(landId);
+      if (r.error) return r;
       var pi = getPlantInteractive();
       if (pi.checkCanHarvest()) {
         pi.performHarvesting();
-        return { ok: true, action: 'harvest', grid: [gridX, gridY] };
+        return { ok: true, action: 'harvest', landId: landId };
       }
-      return { error: 'cannot harvest', grid: [gridX, gridY] };
+      return { error: 'cannot harvest', landId: landId };
     },
 
     /** 浇水指定地块 */
-    water: function (gridX, gridY) {
-      this.clickLand(gridX, gridY);
+    water: function (landId) {
+      var r = this.clickLand(landId);
+      if (r.error) return r;
       var pi = getPlantInteractive();
       if (pi.canWater()) {
         pi.performWatering();
-        return { ok: true, action: 'water', grid: [gridX, gridY] };
+        return { ok: true, action: 'water', landId: landId };
       }
-      return { error: 'cannot water', grid: [gridX, gridY] };
+      return { error: 'cannot water', landId: landId };
     },
 
     /** 施肥指定地块 */
-    fertilize: function (gridX, gridY) {
-      this.clickLand(gridX, gridY);
+    fertilize: function (landId) {
+      var r = this.clickLand(landId);
+      if (r.error) return r;
       var pi = getPlantInteractive();
       if (pi.canFertilize()) {
         pi.performFertilizing();
-        return { ok: true, action: 'fertilize', grid: [gridX, gridY] };
+        return { ok: true, action: 'fertilize', landId: landId };
       }
-      return { error: 'cannot fertilize', grid: [gridX, gridY] };
+      return { error: 'cannot fertilize', landId: landId };
     },
 
     /** 杀虫指定地块 */
-    killBug: function (gridX, gridY) {
-      this.clickLand(gridX, gridY);
+    killBug: function (landId) {
+      var r = this.clickLand(landId);
+      if (r.error) return r;
       var pi = getPlantInteractive();
       if (pi.canKillBug()) {
         pi.performBugKilling();
-        return { ok: true, action: 'killBug', grid: [gridX, gridY] };
+        return { ok: true, action: 'killBug', landId: landId };
       }
-      return { error: 'cannot kill bug', grid: [gridX, gridY] };
+      return { error: 'cannot kill bug', landId: landId };
     },
 
     /** 除草指定地块 */
-    eraseGrass: function (gridX, gridY) {
-      this.clickLand(gridX, gridY);
+    eraseGrass: function (landId) {
+      var r = this.clickLand(landId);
+      if (r.error) return r;
       var pi = getPlantInteractive();
       if (pi.canEraseGrass()) {
         pi.performGrassEraser();
-        return { ok: true, action: 'eraseGrass', grid: [gridX, gridY] };
+        return { ok: true, action: 'eraseGrass', landId: landId };
       }
-      return { error: 'cannot erase grass', grid: [gridX, gridY] };
+      return { error: 'cannot erase grass', landId: landId };
     },
 
     /*
