@@ -104,22 +104,22 @@ Phase 2: Rust bot 连接 TCP 端口
 - [x] 1.3 更新 `inject/Makefile`：添加 `deploy` target（编译 + 签名 + 复制到 sandbox）。
 
 ### Phase 2: Loader 改造
-- [ ] 2.1 重写 `crates/qqbot-loader/src/main.rs`：自动编译 dylib（调用 make）、复制到 sandbox 并签名、查找 PID、LLDB 注入、等待 `rpc_port.txt` 出现并读取端口、TCP 连接健康检查（发送 `{id:0, js:"'ping'"}` 验证）。
-- [ ] 2.2 添加 `--build-only` flag 只编译不注入，`--port` flag 跳过注入直接连接已有 RPC。
+- [x] 2.1 重写 `crates/qqbot-loader/src/main.rs`：自动编译 dylib（调用 make）、复制到 sandbox 并签名、查找 PID、LLDB 注入、等待 `rpc_port.txt` 出现并读取端口、TCP 连接健康检查（发送 `{id:0, js:"'ping'"}` 验证）。
+- [x] 2.2 添加 `--build-only` flag 只编译不注入，`--port` flag 跳过注入直接连接已有 RPC。
 
 ### Phase 3: Rust RPC 客户端
-- [ ] 3.1 新建 `crates/qqbot/src/rpc.rs`：TCP 客户端，连接指定端口，发送 JSON 请求（length-prefixed），接收 JSON 响应，提供 `async fn eval_js(&self, js: &str) -> Result<serde_json::Value>` 接口。
-- [ ] 3.2 新建 `crates/qqbot/src/game.rs`：封装游戏操作的高层 API。`eval_js` 执行 game_bridge.js 中注册的函数。方法：`get_scene_info()`, `walk_nodes(path, depth)`, `find_by_component(name)`, `simulate_touch(path)`。全部返回 `serde_json::Value`。
+- [x] 3.1 新建 `crates/qqbot/src/rpc.rs`：TCP 客户端，连接指定端口，发送 JSON 请求（length-prefixed），接收 JSON 响应，提供 `async fn eval_js(&self, js: &str) -> Result<serde_json::Value>` 接口。
+- [x] 3.2 新建 `crates/qqbot/src/game.rs`：封装游戏操作的高层 API。`eval_js` 执行 game_bridge.js 中注册的函数。方法：`get_scene_info()`, `walk_nodes(path, depth)`, `find_by_component(name)`, `simulate_touch(path)`。全部返回 `serde_json::Value`。
 
 ### Phase 4: Game Bridge 重写
-- [ ] 4.1 重写 `scripts/game_bridge.js`：注册 `window.__qqframbot__` 对象，包含 `getSceneInfo()`, `walkNodes(path, depth)`, `findByComponent(name)`, `simulateTouch(path)`, `getGameState()`（返回农场核心状态）。每个方法返回 JSON 可序列化的结果。
+- [x] 4.1 重写 `scripts/game_bridge.js`：注册 `window.__qqframbot__` 对象，包含 `getSceneInfo()`, `walkNodes(path, depth)`, `findByComponent(name)`, `simulateTouch(path)`, `getGameState()`（返回农场核心状态）。每个方法返回 JSON 可序列化的结果。
 - [ ] 4.2 在 `game_bridge.js` 中添加 `getGameState()`：通过遍历 Cocos Creator 场景树，提取地块列表、作物状态、背包物品。具体结构需要在注入后实际探索场景树来确定。
 
 ### Phase 5: 主程序和调度
-- [ ] 5.1 重写 `crates/qqbot/src/main.rs`：解析 CLI 参数（`--port` RPC 端口），初始化 RPC 客户端，注入 game_bridge.js，根据模式启动探索或自动化。
-- [ ] 5.2 实现 `crates/qqbot/src/farm.rs`：`explore()` 打印场景树结构（用于开发调试），`auto_farm()` 循环检查地块状态并执行操作。
-- [ ] 5.3 实现 `crates/qqbot/src/scheduler.rs`：简单的 loop + sleep 调度，操作间随机延迟 1-3 秒，每轮间隔 30-60 秒。
-- [ ] 5.4 更新 `Cargo.toml`：移除 `chromiumoxide` 依赖。
+- [x] 5.1 重写 `crates/qqbot/src/main.rs`：解析 CLI 参数（`--port` RPC 端口），初始化 RPC 客户端，注入 game_bridge.js，根据模式启动探索或自动化。
+- [x] 5.2 实现 `crates/qqbot/src/farm.rs`：`explore()` 打印场景树结构（用于开发调试），`auto_farm()` 循环检查地块状态并执行操作。
+- [x] 5.3 实现 `crates/qqbot/src/scheduler.rs`：简单的 loop + sleep 调度，操作间随机延迟 1-3 秒，每轮间隔 30-60 秒。
+- [x] 5.4 更新 `Cargo.toml`：移除 `chromiumoxide` 依赖。
 
 ### Phase 6: 端到端验证
 - [ ] 6.1 端到端测试：`cargo run -p qqbot-loader` 自动注入 → `cargo run -p qqbot -- --explore` 探索场景树 → 确认能读取到游戏状态。
