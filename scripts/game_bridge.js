@@ -152,84 +152,119 @@
       return { error: 'cannot erase grass', grid: [gridX, gridY] };
     },
 
-    /** 一键收获所有成熟作物 */
+    /*
+     * 一键操作 — OneClickOperationBtnComp.onButtonClick(index)
+     * 0 = icon_steals (收获/偷菜)
+     * 1 = icon_waterings (浇水)
+     * 2 = icon_grass_erasers (除草)
+     * 3 = icon_bug_killers (杀虫)
+     */
+
+    /** 一键收获（自己农场）/ 一键偷菜（好友农场） */
     harvestAll: function () {
-      var ids = getOneClick().getAllHarvestableLandIds();
-      if (ids.length === 0) return { harvested: 0 };
-      var farm = getFarmMap();
-      var results = [];
-      for (var i = 0; i < ids.length; i++) {
-        var lc = farm.getLandCompByLandId(ids[i]);
-        if (lc) {
-          lc.showPlantInteraction();
-          var pi = getPlantInteractive();
-          if (pi.checkCanHarvest()) {
-            pi.performHarvesting();
-            results.push(ids[i]);
-          }
-        }
-      }
-      return { harvested: results.length, landIds: results };
+      var ock = getOneClick();
+      var ids = ock.getAllHarvestableLandIds();
+      if (ids.length === 0) return { count: 0 };
+      ock.onButtonClick(0);
+      return { count: ids.length, landIds: ids };
     },
 
-    /** 一键浇水所有缺水地块 */
+    /** 一键浇水 */
     waterAll: function () {
-      var ids = getOneClick().getAllWaterableLandIds();
-      if (ids.length === 0) return { watered: 0 };
-      var farm = getFarmMap();
-      var results = [];
-      for (var i = 0; i < ids.length; i++) {
-        var lc = farm.getLandCompByLandId(ids[i]);
-        if (lc) {
-          lc.showPlantInteraction();
-          var pi = getPlantInteractive();
-          if (pi.canWater()) {
-            pi.performWatering();
-            results.push(ids[i]);
-          }
-        }
-      }
-      return { watered: results.length, landIds: results };
+      var ock = getOneClick();
+      var ids = ock.getAllWaterableLandIds();
+      if (ids.length === 0) return { count: 0 };
+      ock.onButtonClick(1);
+      return { count: ids.length, landIds: ids };
     },
 
-    /** 一键除虫所有有虫地块 */
-    killBugAll: function () {
-      var ids = getOneClick().getAllKillBugLandIds();
-      if (ids.length === 0) return { killed: 0 };
-      var farm = getFarmMap();
-      var results = [];
-      for (var i = 0; i < ids.length; i++) {
-        var lc = farm.getLandCompByLandId(ids[i]);
-        if (lc) {
-          lc.showPlantInteraction();
-          var pi = getPlantInteractive();
-          if (pi.canKillBug()) {
-            pi.performBugKilling();
-            results.push(ids[i]);
-          }
-        }
-      }
-      return { killed: results.length, landIds: results };
-    },
-
-    /** 一键除草所有有草地块 */
+    /** 一键除草 */
     eraseGrassAll: function () {
-      var ids = getOneClick().getAllEraseGrassLandIds();
-      if (ids.length === 0) return { erased: 0 };
-      var farm = getFarmMap();
-      var results = [];
-      for (var i = 0; i < ids.length; i++) {
-        var lc = farm.getLandCompByLandId(ids[i]);
-        if (lc) {
-          lc.showPlantInteraction();
-          var pi = getPlantInteractive();
-          if (pi.canEraseGrass()) {
-            pi.performGrassEraser();
-            results.push(ids[i]);
-          }
-        }
-      }
-      return { erased: results.length, landIds: results };
+      var ock = getOneClick();
+      var ids = ock.getAllEraseGrassLandIds();
+      if (ids.length === 0) return { count: 0 };
+      ock.onButtonClick(2);
+      return { count: ids.length, landIds: ids };
+    },
+
+    /** 一键杀虫 */
+    killBugAll: function () {
+      var ock = getOneClick();
+      var ids = ock.getAllKillBugLandIds();
+      if (ids.length === 0) return { count: 0 };
+      ock.onButtonClick(3);
+      return { count: ids.length, landIds: ids };
+    },
+
+    /* ── 好友系统 ── */
+
+    /** 打开好友面板 */
+    openFriendPanel: function () {
+      var scene = getScene();
+      var btn = cc.find('root/ui/LayerUI/main_ui_v2/Menu/Node_Friend/UIFriendEnterBtn', scene);
+      btn.getComponent('UIFriendEnterBtn').onBtnFriend();
+      return { ok: true };
+    },
+
+    /** 获取好友列表（需先 openFriendPanel，等 2 秒后调用） */
+    getFriendList: function () {
+      var scene = getScene();
+      var subNode = cc.find('root/ui/LayerPopUp/FriendUI/root/mid/contentNode/SubFriendUI', scene);
+      if (!subNode) return { error: 'friend panel not open' };
+      var sv = subNode.getComponent('SubFriendUI').scrollViewEx;
+      var list = sv.getDataList();
+      return list.map(function (f) {
+        return {
+          gid: f.gid,
+          name: f.name,
+          remark: f.remark,
+          level: f.level,
+          steal: f.plant ? f.plant.steal_plant_num : 0,
+          dry: f.plant ? f.plant.dry_num : 0,
+          weed: f.plant ? f.plant.weed_num : 0,
+          insect: f.plant ? f.plant.insect_num : 0,
+        };
+      });
+    },
+
+    /** 访问好友农场（需先 openFriendPanel） */
+    visitFriend: function (gid) {
+      var scene = getScene();
+      var subNode = cc.find('root/ui/LayerPopUp/FriendUI/root/mid/contentNode/SubFriendUI', scene);
+      if (!subNode) return { error: 'friend panel not open' };
+      var sv = subNode.getComponent('SubFriendUI').scrollViewEx;
+      var list = sv.getDataList();
+      var target = list.find(function (f) { return f.gid === gid; });
+      if (!target) return { error: 'friend not found: ' + gid };
+      var items = sv.getAllItemIns();
+      if (!items || items.length === 0) return { error: 'no rendered items' };
+      var comp = items[0].getComponent('SubFriendItem');
+      comp.data = target;
+      comp.onVisitBtn();
+      return { ok: true, name: target.name, gid: gid };
+    },
+
+    /** 回自己的农场 */
+    backToOwnFarm: function () {
+      var scene = getScene();
+      var farm = cc.find('root/scene/farm_scene_v3', scene).getComponent('FarmMapComp');
+      farm.getFarmEntity().MainUI.backOwerFarm();
+      return { ok: true };
+    },
+
+    /** 当前是否在好友农场 */
+    isVisiting: function () {
+      var scene = getScene();
+      var farm = cc.find('root/scene/farm_scene_v3', scene).getComponent('FarmMapComp');
+      var model = farm.getFarmEntity().FarmModel;
+      var vm = model.visitUserModel;
+      var own = model.player_id;
+      return {
+        visiting: !!(vm && vm.gid && vm.gid !== own),
+        ownId: own,
+        visitGid: vm ? vm.gid : null,
+        visitName: vm ? vm.name : null,
+      };
     },
   };
 
